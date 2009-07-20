@@ -50,6 +50,8 @@
 #include "nsIPropertyBag.h"
 #include "nsIProperty.h"
 #include "nsIVariant.h"
+#include "nsIPrefService.h"
+#include "nsIPrefBranch.h"
 
 #pragma GCC visibility push(default)
 extern "C" {
@@ -60,9 +62,13 @@ extern "C" {
 #ifdef PR_LOGGING
 PRLogModuleInfo *gGnomeKeyringLog;
 #endif
-
-// XXX The keyring name should be customizable
-const char* kKeyring = "mozilla";
+/* create the preference item extensions.gnome-keyring.keyringName
+ * to set wich keyring save the password to. The default is mozilla.
+ * Note that password will be retrieved from every unlocked keyring,
+ * because the gnome-keyring API doens't provide a way to search in
+ * just one keyring.
+ */
+nsCString keyringName;
 
 // XXX should use profile identifier instead of a constant
 #define UNIQUE_PROFILE_ID "v1"
@@ -132,7 +138,7 @@ class AutoFoundList {
 static GnomeKeyringAttributeList *
 buildAttributeList(nsILoginInfo *aLogin)
 {
-  nsString s;
+  nsAutoString s;
   GnomeKeyringAttributeList *attributes = gnome_keyring_attribute_list_new();
 
   aLogin->GetHostname(s);
@@ -176,15 +182,15 @@ buildAttributeList(nsILoginInfo *aLogin)
 static void appendAttributesFromBag(nsIPropertyBag *matchData,
                                     GnomeKeyringAttributeList * &attributes)
 {
-  nsString s, property, propName;
-  nsIVariant *propValue;
+  nsAutoString s, property, propName;
+  nsCOMPtr<nsIVariant> propValue;
   nsresult result;
 
   gnome_keyring_attribute_list_append_string(attributes,
                                              kLoginInfoMagicAttrName,
                                              kLoginInfoMagicAttrValue);
   property.AssignLiteral(kHostnameAttr);
-  result = matchData->GetProperty(property, &propValue);
+  result = matchData->GetProperty(property, getter_AddRefs(propValue));
   if ( result != NS_ERROR_FAILURE ) {
     propValue->GetAsAString(s);
     const char* tempValue = NS_ConvertUTF16toUTF8(s).get();
@@ -196,7 +202,7 @@ static void appendAttributesFromBag(nsIPropertyBag *matchData,
 //  formSubmitURL and httpRealm are not guaranteed to be set.
 
   property.AssignLiteral(kFormSubmitURLAttr);
-  result = matchData->GetProperty(property, &propValue);
+  result = matchData->GetProperty(property, getter_AddRefs(propValue));
   if ( result != NS_ERROR_FAILURE ) {
     propValue->GetAsAString(s);
     if (!s.IsVoid()){
@@ -208,7 +214,7 @@ static void appendAttributesFromBag(nsIPropertyBag *matchData,
   }
 
   property.AssignLiteral(kHttpRealmAttr);
-  result = matchData->GetProperty(property, &propValue);
+  result = matchData->GetProperty(property, getter_AddRefs(propValue));
   if ( result != NS_ERROR_FAILURE ) {
     propValue->GetAsAString(s);
     if (!s.IsVoid()){
@@ -220,7 +226,7 @@ static void appendAttributesFromBag(nsIPropertyBag *matchData,
   }
                                       
   property.AssignLiteral(kUsernameFieldAttr);
-  result = matchData->GetProperty(property, &propValue);
+  result = matchData->GetProperty(property, getter_AddRefs(propValue));
   if ( result != NS_ERROR_FAILURE ) {
     propValue->GetAsAString(s);
     const char* tempValue = NS_ConvertUTF16toUTF8(s).get();
@@ -230,7 +236,7 @@ static void appendAttributesFromBag(nsIPropertyBag *matchData,
   }
     
   property.AssignLiteral(kPasswordFieldAttr);
-  result = matchData->GetProperty(property, &propValue);
+  result = matchData->GetProperty(property, getter_AddRefs(propValue));
   if ( result != NS_ERROR_FAILURE ) {
     propValue->GetAsAString(s);
     const char* tempValue = NS_ConvertUTF16toUTF8(s).get();
@@ -240,7 +246,7 @@ static void appendAttributesFromBag(nsIPropertyBag *matchData,
   }
   
   property.AssignLiteral(kUsernameAttr);
-  result = matchData->GetProperty(property, &propValue);
+  result = matchData->GetProperty(property, getter_AddRefs(propValue));
   if ( result != NS_ERROR_FAILURE ) {
     propValue->GetAsAString(s);
     const char* tempValue = NS_ConvertUTF16toUTF8(s).get();
@@ -255,7 +261,7 @@ static nsresult deleteFoundItems(GList* foundList,
                                  PRBool aExpectOnlyOne = PR_FALSE)
 {
   if (foundList == NULL) {
-    // GK_LOG(("Found not items to delete"));
+    GK_LOG(("Found not items to delete"));
     return NS_OK;
   }
 
@@ -263,9 +269,9 @@ static nsresult deleteFoundItems(GList* foundList,
   for (GList* l = foundList; l != NULL; l = l->next, i++)
   {
     GnomeKeyringFound* found = static_cast<GnomeKeyringFound*>(l->data);
-    // GK_LOG(("Found item with id %i\n", found->item_id));
+    GK_LOG(("Found item with id %i\n", found->item_id));
 
-    GnomeKeyringResult result = gnome_keyring_item_delete_sync(kKeyring,
+    GnomeKeyringResult result = gnome_keyring_item_delete_sync(keyringName.get(),
                                                                found->item_id);
     if (result != GNOME_KEYRING_RESULT_OK) {
       return NS_ERROR_FAILURE;
@@ -302,7 +308,7 @@ foundToLoginInfo(GnomeKeyringFound* found)
 
     const char *attrName = attrArray[i].name;
     const char *attrValue = attrArray[i].value.string;
-    // GK_LOG(("Attr value %s\n", attrValue));
+    GK_LOG(("Attr value %s\n", attrValue));
 
     if (!strcmp(attrName, kHostnameAttr))
      loginInfo->SetHostname(NS_ConvertUTF8toUTF16(attrValue));
@@ -338,7 +344,7 @@ foundToHost(GnomeKeyringFound* found)
 
     const char *attrName = attrArray[i].name;
     const char *attrValue = attrArray[i].value.string;
-    // GK_LOG(("Attr value %s\n", attrValue));
+    GK_LOG(("Attr value %s\n", attrValue));
 
     if (!strcmp(attrName, kDisabledHostAttrName))
       host = NS_StringCloneData(NS_ConvertUTF8toUTF16(attrValue));
@@ -361,7 +367,7 @@ nsresult foundListToArray(T (*aFoundToObject)(T2 found),
     count++;
     l = l->next;
   }
-  // GK_LOG(("Num items: %i\n", count));
+  GK_LOG(("Num items: %i\n", count));
 
   T *array = static_cast<T*>(nsMemory::Alloc(count * sizeof(T)));
   NS_ENSURE_TRUE(array, NS_ERROR_OUT_OF_MEMORY);
@@ -371,7 +377,7 @@ nsresult foundListToArray(T (*aFoundToObject)(T2 found),
   PRUint32 i = 0;
   for (GList* l = aFoundList; l != NULL; l = l->next, i++) {
     T2 found = static_cast<T2>(l->data);
-    // GK_LOG(("Found item with id %i\n", found->item_id));
+    GK_LOG(("Found item with id %i\n", found->item_id));
 
     T obj = aFoundToObject(found);
     NS_ENSURE_STATE(obj);
@@ -477,13 +483,41 @@ NS_IMPL_ISUPPORTS1(GnomeKeyring, nsILoginManagerStorage)
 
 NS_IMETHODIMP GnomeKeyring::Init()
 {
-  nsresult ret = NS_OK;
+  nsresult ret;
+  nsCOMPtr<nsIServiceManager> servMan; 
+  nsCOMPtr<nsIPrefService> prefService;
+  nsCOMPtr<nsIPrefBranch> pref;
 #ifdef PR_LOGGING
   gGnomeKeyringLog = PR_NewLogModule("GnomeKeyringLog");
 #endif
+  keyringName.AssignLiteral("mozilla");
+  ret = NS_GetServiceManager(getter_AddRefs(servMan));
+  if (ret == NS_OK) {
+    ret = servMan->
+      GetServiceByContractID("@mozilla.org/preferences-service;1",
+                             NS_GET_IID(nsIPrefService),
+                             getter_AddRefs(prefService));
+    if (ret == NS_OK) {
+    ret = prefService->ReadUserPrefs(nsnull);
+      if (ret == NS_OK) {
+        ret = prefService->
+          GetBranch("extensions.gnome-keyring.", getter_AddRefs(pref));
+        if (ret == NS_OK) {
+          PRInt32 prefType;
+          ret = pref->GetPrefType("keyringName", &prefType);
+          if ((ret == NS_OK) && (prefType == 32)) {
+            char* tempKeyringName;
+            pref->GetCharPref("keyringName", &tempKeyringName);
+            keyringName = tempKeyringName;
+            if ( keyringName.IsVoid() ) keyringName.AssignLiteral("mozilla");
+          }
+        }
+      }
+    }
+  } 
 
 /* Create the password keyring, it doesn't hurt if it already exists */
-  GnomeKeyringResult result = gnome_keyring_create_sync(kKeyring, NULL);
+  GnomeKeyringResult result = gnome_keyring_create_sync(keyringName.get(), NULL);
   if ((result != GNOME_KEYRING_RESULT_OK) &&
      (result != GNOME_KEYRING_RESULT_ALREADY_EXISTS)) {
     ret = NS_ERROR_FAILURE;
@@ -502,12 +536,12 @@ NS_IMETHODIMP GnomeKeyring::AddLogin(nsILoginInfo *aLogin)
 {
   GnomeKeyringAttributeList *attributes = buildAttributeList(aLogin);
 
-  nsString password, hostname;
+  nsAutoString password, hostname;
   aLogin->GetPassword(password);
   aLogin->GetHostname(hostname);
   guint itemId;
 
-  GnomeKeyringResult result = gnome_keyring_item_create_sync(kKeyring,
+  GnomeKeyringResult result = gnome_keyring_item_create_sync(keyringName.get(),
                                         GNOME_KEYRING_ITEM_GENERIC_SECRET,
                                         NS_ConvertUTF16toUTF8(hostname).get(),
                                         attributes,
@@ -542,19 +576,18 @@ NS_IMETHODIMP GnomeKeyring::ModifyLogin(nsILoginInfo *oldLogin,
   /* If the second argument is an nsILoginInfo, 
    * just remove the old login and add the new one */
 
-  void *newLogin;
-  nsresult interfaceok = modLogin->QueryInterface(NS_GET_IID(nsILoginInfo), &newLogin);
+  nsresult interfaceok;
+  nsCOMPtr<nsILoginInfo> newLogin( do_QueryInterface(modLogin, &interfaceok) );
   if (interfaceok == NS_OK) {
     nsresult rv = RemoveLogin(oldLogin);
-    rv |= AddLogin(static_cast<nsILoginInfo*>(newLogin));
+    rv |= AddLogin(newLogin);
   return rv;
   } /* Otherwise, it has to be an nsIPropertyBag.
      * Let's get the attributes from the old login, then append the ones 
      * fetched from the property bag. Gracefully, if an attribute appears
      * twice in an attribut list, the last value is stored. */
     else {
-    void *matchData;
-    interfaceok =  modLogin->QueryInterface(NS_GET_IID(nsIPropertyBag), &matchData);
+    nsCOMPtr<nsIPropertyBag> matchData( do_QueryInterface(modLogin, &interfaceok) );
     if (interfaceok == NS_OK) {
       GnomeKeyringAttributeList *attributes = buildAttributeList(oldLogin);
       AutoFoundList foundList;
@@ -584,7 +617,7 @@ NS_IMETHODIMP GnomeKeyring::ModifyLogin(nsILoginInfo *oldLogin,
           return NS_ERROR_FAILURE;
         }
       }
-      result = gnome_keyring_item_set_attributes_sync(kKeyring,
+      result = gnome_keyring_item_set_attributes_sync(keyringName.get(),
                                                       id,
                                                       attributes);
       gnome_keyring_attribute_list_free(attributes);
@@ -662,7 +695,7 @@ NS_IMETHODIMP GnomeKeyring::SearchLogins(PRUint32 *count,
                                         GNOME_KEYRING_ITEM_GENERIC_SECRET,
                                         attributes,
                                         &foundList );
-
+  GK_ENSURE_SUCCESS_BUGGY(result);
   gnome_keyring_attribute_list_free(attributes);
   return foundListToArray(foundToLoginInfo, foundList, count, logins); 
 
@@ -744,7 +777,7 @@ NS_IMETHODIMP GnomeKeyring::SetLoginSavingEnabled(const nsAString & aHost,
   const char* name = "Mozilla disabled host entry";
   guint itemId;
 
-  result = gnome_keyring_item_create_sync(kKeyring,
+  result = gnome_keyring_item_create_sync(keyringName.get(),
             GNOME_KEYRING_ITEM_NOTE,
             name,
             attributes,
