@@ -14,6 +14,7 @@ XPI_TARGET = gnome-keyring_password_integration-0.3.xpi
 
 
 build-xpi: build-library
+	mkdir -p xpi/platform/Linux_x86-gcc3/components
 	cp $(TARGET) xpi/platform/Linux_x86-gcc3/components
 	cd xpi && zip -r ../$(XPI_TARGET) *
 
