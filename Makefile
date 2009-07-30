@@ -7,12 +7,14 @@ CPPFLAGS +=     -fno-rtti              \
 DEPENDENCY_CFLAGS = `pkg-config --cflags libxul libxul-unstable gnome-keyring-1`
 GNOME_LDFLAGS = `pkg-config --libs gnome-keyring-1`
 XUL_LDFLAGS = `pkg-config --libs libxul libxul-unstable`
-VERSION = "0.3"
+VERSION = 0.3
 FILES = GnomeKeyring.cpp 
 
 TARGET = libgnomekeyring.so
 XPI_TARGET = gnome-keyring_password_integration-$(VERSION).xpi
 ARCH := $(shell uname -m)
+# Update the ARCH variable so that the Mozilla architectures are used
+ARCH := $(shell echo ${ARCH} | sed 's/i686/x86/')
 
 build-xpi: build-library
 	sed -i 's/<em:version>.*<\/em:version>/<em:version>$(VERSION)<\/em:version>/' xpi/install.rdf
