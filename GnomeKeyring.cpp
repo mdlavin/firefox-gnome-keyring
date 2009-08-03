@@ -135,8 +135,8 @@ class AutoFoundList {
 
 // Utilities
 
-static GnomeKeyringAttributeList *
-buildAttributeList(nsILoginInfo *aLogin)
+GnomeKeyringAttributeList *
+GnomeKeyring::buildAttributeList(nsILoginInfo *aLogin)
 {
   nsAutoString s;
   GnomeKeyringAttributeList *attributes = gnome_keyring_attribute_list_new();
@@ -179,7 +179,7 @@ buildAttributeList(nsILoginInfo *aLogin)
   return attributes;
 }
 
-static void appendAttributesFromBag(nsIPropertyBag *matchData,
+void GnomeKeyring::appendAttributesFromBag(nsIPropertyBag *matchData,
                                     GnomeKeyringAttributeList * &attributes)
 {
   nsAutoString s, property, propName;
@@ -257,7 +257,7 @@ static void appendAttributesFromBag(nsIPropertyBag *matchData,
 
 }
 
-static nsresult deleteFoundItems(GList* foundList,
+nsresult GnomeKeyring::deleteFoundItems(GList* foundList,
                                  PRBool aExpectOnlyOne = PR_FALSE)
 {
   if (foundList == NULL) {

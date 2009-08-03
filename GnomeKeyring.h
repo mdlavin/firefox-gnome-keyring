@@ -35,6 +35,9 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "nsILoginManagerStorage.h"
+extern "C" {
+#include "gnome-keyring.h"
+}
 
 #define GNOMEKEYRING_CID \
 { 0xda355706, 0x2b26, 0x4682, { 0xbe, 0x76, 0xd6, 0x87, 0x13, 0x12, 0xd3, 0xa1}}
@@ -50,6 +53,13 @@ extern PRLogModuleInfo *gGnomeKeyringLog;
 
 class GnomeKeyring : public nsILoginManagerStorage
 {
+  private:
+  GnomeKeyringAttributeList *buildAttributeList(nsILoginInfo *aLogin);
+  void appendAttributesFromBag(nsIPropertyBag *matchData,
+                                    GnomeKeyringAttributeList * &attributes);
+  nsresult deleteFoundItems(GList* foundList,
+                                 PRBool);
+  
 public:
   NS_DECL_ISUPPORTS
   NS_DECL_NSILOGINMANAGERSTORAGE
