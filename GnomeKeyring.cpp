@@ -190,10 +190,9 @@ void GnomeKeyring::appendAttributesFromBag(nsIPropertyBag *matchData,
   result = matchData->GetProperty(property, getter_AddRefs(propValue));
   if ( result != NS_ERROR_FAILURE ) {
     propValue->GetAsAString(s);
-    const char* tempValue = NS_ConvertUTF16toUTF8(s).get();
     gnome_keyring_attribute_list_append_string(attributes,
                                                kHostnameAttr,
-                                               tempValue);
+                                               NS_ConvertUTF16toUTF8(s).get());
   }
 
 //  formSubmitURL and httpRealm are not guaranteed to be set.
@@ -203,10 +202,9 @@ void GnomeKeyring::appendAttributesFromBag(nsIPropertyBag *matchData,
   if ( result != NS_ERROR_FAILURE ) {
     propValue->GetAsAString(s);
     if (!s.IsVoid()){
-      const char* tempValue = NS_ConvertUTF16toUTF8(s).get();
       gnome_keyring_attribute_list_append_string(attributes,
                                                  kFormSubmitURLAttr,
-                                                 tempValue);
+                                                 NS_ConvertUTF16toUTF8(s).get());
     }
   }
 
@@ -215,10 +213,9 @@ void GnomeKeyring::appendAttributesFromBag(nsIPropertyBag *matchData,
   if ( result != NS_ERROR_FAILURE ) {
     propValue->GetAsAString(s);
     if (!s.IsVoid()){
-      const char* tempValue = NS_ConvertUTF16toUTF8(s).get();
       gnome_keyring_attribute_list_append_string(attributes,
                                                kHttpRealmAttr,
-                                               tempValue);
+					       NS_ConvertUTF16toUTF8(s).get());
     }
   }
                                       
@@ -226,30 +223,27 @@ void GnomeKeyring::appendAttributesFromBag(nsIPropertyBag *matchData,
   result = matchData->GetProperty(property, getter_AddRefs(propValue));
   if ( result != NS_ERROR_FAILURE ) {
     propValue->GetAsAString(s);
-    const char* tempValue = NS_ConvertUTF16toUTF8(s).get();
     gnome_keyring_attribute_list_append_string(attributes,
                                                kUsernameFieldAttr,
-                                               tempValue);
+					       NS_ConvertUTF16toUTF8(s).get());
   }
     
   property.AssignLiteral(kPasswordFieldAttr);
   result = matchData->GetProperty(property, getter_AddRefs(propValue));
   if ( result != NS_ERROR_FAILURE ) {
     propValue->GetAsAString(s);
-    const char* tempValue = NS_ConvertUTF16toUTF8(s).get();
     gnome_keyring_attribute_list_append_string(attributes,
                                                kPasswordFieldAttr,
-                                               tempValue);
+					       NS_ConvertUTF16toUTF8(s).get());
   }
   
   property.AssignLiteral(kUsernameAttr);
   result = matchData->GetProperty(property, getter_AddRefs(propValue));
   if ( result != NS_ERROR_FAILURE ) {
     propValue->GetAsAString(s);
-    const char* tempValue = NS_ConvertUTF16toUTF8(s).get();
     gnome_keyring_attribute_list_append_string(attributes,
                                                kUsernameAttr,
-                                               tempValue);
+					       NS_ConvertUTF16toUTF8(s).get());
     }
 
 }
@@ -429,9 +423,10 @@ findLogins(const nsAString & aHostname,
 
   gnome_keyring_attribute_list_append_string(attributes,
                           kLoginInfoMagicAttrName, kLoginInfoMagicAttrValue);
-  const char* tempHostname = NS_ConvertUTF16toUTF8(aHostname).get();
+  /* Convert to UTF-8 (but keep a reference to the NS_ConvertUTF16ToUTF8
+   * instance around, so the string .get() returns won't be free'd */
   gnome_keyring_attribute_list_append_string(attributes, kHostnameAttr,
-					     tempHostname);
+					     NS_ConvertUTF16toUTF8(aHostname).get());
   
   GList* unfiltered;
   GnomeKeyringResult result = gnome_keyring_find_items_sync(
@@ -441,8 +436,12 @@ findLogins(const nsAString & aHostname,
 
   gnome_keyring_attribute_list_free(attributes);
 
-  const char* tempActionUrl = aActionURL.IsVoid() ? NULL : NS_ConvertUTF16toUTF8(aActionURL).get();
-  const char* tempHttpRealm = aHttpRealm.IsVoid() ? NULL : NS_ConvertUTF16toUTF8(aHttpRealm).get();
+  /* Convert to UTF-8 (but keep a reference to the NS_ConvertUTF16ToUTF8
+   * instance around, so the string .get() returns won't be free'd */
+  const NS_ConvertUTF16toUTF8 utf8ActionURL(aActionURL);
+  const char* tempActionUrl = utf8ActionURL.IsVoid() ? NULL : utf8ActionURL.get();
+  const NS_ConvertUTF16toUTF8 utf8HttpRealm(aHttpRealm);
+  const char* tempHttpRealm = utf8HttpRealm.IsVoid() ? NULL : utf8HttpRealm.get();
 
   for (GList* l = unfiltered; l != NULL; l = l->next) {
     bool isMatch = TRUE;
