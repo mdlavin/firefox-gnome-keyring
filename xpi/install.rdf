@@ -5,19 +5,28 @@
 
   <Description about="urn:mozilla:install-manifest">
     <em:id>{6f9d85e0-794d-11dd-ad8b-0800200c9a66}</em:id>
-    <em:version>0.3</em:version>
+    <em:version>0.4</em:version>
     <em:type>2</em:type>
 
-    <!-- Firefox -->
+      <!-- Thunderbird -->
+    <em:targetApplication>
+      <Description>
+        <em:id>{3550f703-e582-4d05-9a08-453d09bdfdc6}</em:id>
+        <em:minVersion>3.0</em:minVersion>
+        <em:maxVersion>3.0.*</em:maxVersion>
+      </Description>
+    </em:targetApplication>
+
+	<!-- Firefox -->
     <em:targetApplication>
       <Description>
         <em:id>{ec8030f7-c20a-464f-9b0e-13a3a9e97384}</em:id>
         <em:minVersion>3.5</em:minVersion>
-        <em:maxVersion>3.5.*</em:maxVersion>
+        <em:maxVersion>3.6.*</em:maxVersion>
       </Description>
     </em:targetApplication>
 
-    <em:targetPlatform>Linux_x86-gcc3</em:targetPlatform>
+    <em:targetPlatform>Linux_x86_64-gcc3</em:targetPlatform>
 
     <em:name>Gnome-keyring password integration</em:name>
     <em:description>An extension to enable passwords and form logins to be stored in gnome-keyring</em:description>
