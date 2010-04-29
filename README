@@ -1,0 +1,19 @@
+An extension to enable passwords and form logins to be stored in gnome-keyring
+
+This extension replaces the default password manager in both Firefox and
+Thunderbird with an implementation which stores the passwords in Gnome keyring.
+
+This allows for safe storage of passwords without prompting for password after
+Firefox or Thunderbird has been started.
+
+Notice: gnome-keyring stores the passwords encrypted on permanent storage but
+it keeps passwords in memory without encryption. As a result, other programs
+with access to memory space of gnome-keyring (namely debuggers and applications
+running as root) may be able to extract the passwords. The same applies to
+internal Firefox and Thunderbird implementations so use of this extension
+should be any less secure than the default implementation. The passwords are
+decrypted once the gnome keyring has been opened (if a gnome keyring has
+identical password to your login password, it will be automatically opened once
+you login). Your passwords are stored only in encrypted form any time you are
+not logged in.
+
