@@ -143,20 +143,20 @@ GnomeKeyring::buildAttributeList(nsILoginInfo *aLogin)
 
   aLogin->GetHostname(s);
   gnome_keyring_attribute_list_append_string(attributes, kHostnameAttr,
-		  NS_ConvertUTF16toUTF8(s).get());
+                                             NS_ConvertUTF16toUTF8(s).get());
   
 //  formSubmitURL and httpRealm are not guaranteed to be set.
 
   aLogin->GetFormSubmitURL(s);
   if (!s.IsVoid()) {
     gnome_keyring_attribute_list_append_string(attributes, kFormSubmitURLAttr,
-    		NS_ConvertUTF16toUTF8(s).get());
+                                               NS_ConvertUTF16toUTF8(s).get());
   }
 
   aLogin->GetHttpRealm(s);
   if (!s.IsVoid()) {
     gnome_keyring_attribute_list_append_string(attributes, kHttpRealmAttr,
-    		NS_ConvertUTF16toUTF8(s).get());
+                                               NS_ConvertUTF16toUTF8(s).get());
   }
 
   aLogin->GetUsername(s);
