@@ -1,14 +1,11 @@
-CXX   = g++
-CPPFLAGS +=     -fno-rtti              \
-		-fno-exceptions        \
-		-shared                \
-                -fPIC
+CXX       = g++
+CPPFLAGS += -fno-rtti -fno-exceptions -shared -fPIC
 
 DEPENDENCY_CFLAGS = `pkg-config --cflags libxul gnome-keyring-1`
-GNOME_LDFLAGS = `pkg-config --libs gnome-keyring-1`
-XUL_LDFLAGS = `pkg-config --libs libxul `
-VERSION = 0.3
-FILES = GnomeKeyring.cpp
+GNOME_LDFLAGS     = `pkg-config --libs gnome-keyring-1`
+XUL_LDFLAGS       = `pkg-config --libs libxul `
+VERSION           = 0.3
+FILES             = GnomeKeyring.cpp
 
 TARGET = libgnomekeyring.so
 XPI_TARGET = gnome-keyring_password_integration-$(VERSION).xpi
@@ -26,7 +23,6 @@ build-xpi: build-library
 build-library:
 	$(CXX) $(FILES) -g -Wall -o $(TARGET) $(DEPENDENCY_CFLAGS) $(XUL_LDFLAGS) $(GNOME_LDFLAGS) $(CPPFLAGS) $(CXXFLAGS) $(GECKO_DEFINES)
 	chmod +x $(TARGET)
-#	strip $(TARGET)
 
 build: build-library build-xpi
 
