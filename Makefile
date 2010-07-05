@@ -14,6 +14,7 @@ ARCH := $(shell uname -m)
 ARCH := $(shell echo ${ARCH} | sed 's/i686/x86/')
 
 build-xpi: build-library
+	mkdir xpi
 	cp install.rdf xpi/install.rdf
 	sed -i 's/<em:version>.*<\/em:version>/<em:version>$(VERSION)<\/em:version>/' xpi/install.rdf
 	sed -i 's/<em:targetPlatform>.*<\/em:targetPlatform>/<em:targetPlatform>Linux_$(ARCH)-gcc3<\/em:targetPlatform>/' xpi/install.rdf
@@ -29,5 +30,5 @@ build: build-library build-xpi
 
 clean:
 	rm $(TARGET)
-	rm xpi/platform/Linux_$(ARCH)-gcc3/components/$(TARGET)
+	rm -r xpi/
 	rm gnome-keyring_password_integration-$(VERSION).xpi
