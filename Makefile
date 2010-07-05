@@ -14,6 +14,7 @@ ARCH := $(shell uname -m)
 ARCH := $(shell echo ${ARCH} | sed 's/i686/x86/')
 
 build-xpi: build-library
+	cp install.rdf xpi/install.rdf
 	sed -i 's/<em:version>.*<\/em:version>/<em:version>$(VERSION)<\/em:version>/' xpi/install.rdf
 	sed -i 's/<em:targetPlatform>.*<\/em:targetPlatform>/<em:targetPlatform>Linux_$(ARCH)-gcc3<\/em:targetPlatform>/' xpi/install.rdf
 	mkdir -p xpi/platform/Linux_$(ARCH)-gcc3/components
