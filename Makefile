@@ -4,9 +4,9 @@ CPPFLAGS +=     -fno-rtti              \
 		-shared                \
                 -fPIC
 
-DEPENDENCY_CFLAGS = `pkg-config --cflags libxul libxul-unstable gnome-keyring-1`
+DEPENDENCY_CFLAGS = `pkg-config --cflags libxul gnome-keyring-1`
 GNOME_LDFLAGS = `pkg-config --libs gnome-keyring-1`
-XUL_LDFLAGS = `pkg-config --libs libxul libxul-unstable`
+XUL_LDFLAGS = `pkg-config --libs libxul `
 VERSION = 0.3
 FILES = GnomeKeyring.cpp 
 
