@@ -17,3 +17,29 @@ identical password to your login password, it will be automatically opened once
 you login). Your passwords are stored only in encrypted form any time you are
 not logged in.
 
+some basic infos about the extension:
+
+there’s no migration facility atm, if you move from ff integrated
+password manager to gnome keyring you’ll need to save all the passwords
+again. saved password in ff remain untouched, so remember to delete
+them when the add-on is inactive if you’re decided to move. if you
+set a master password, when you click on preferences→security→saved
+passwords→ show passwords you still get asked for it, even if gnome
+keyring is active. you can change the keyring in which passwords are saved
+by creating the preference item extensions.gnome-keyring.keyringName. The
+default is mozilla. Note that password will be retrieved from every
+unlocked keyring because the gnome-keyring API doens’t provide a way
+to search in just one keyring. You’ll find some more infos on bugzilla
+(https://bugzilla.mozilla.org/show_bug.cgi?id=309807)
+
+
+
+Build dependencies:
+ * libgnome-keyring-devel
+ * xulrunner-devel
+
+Tested on:
+ - Ubuntu 10.04 with Firefox 3.6.7 by <der.claudio@gmail.com>
+ - Arch Linux
+ - Gentoo Linux with Firefox 3.6.9
+
