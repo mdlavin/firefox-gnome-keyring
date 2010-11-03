@@ -38,8 +38,21 @@ Build dependencies:
  * libgnome-keyring-devel
  * xulrunner-devel
 
+
 Tested on:
  - Ubuntu 10.04 with Firefox 3.6.7 by <der.claudio@gmail.com>
+ - Ubuntu 10.10 with Firefox 3.6.12 and Thunderbird 3.1.6 (see bugs)
  - Arch Linux
- - Gentoo Linux with Firefox 3.6.9
+ - Gentoo Linux with Firefox 3.6.12 and Thunderbird 3.1.6
+
+
+Known Bugs:
+- Problems on Ubuntu 8.10 installation with Thundebird 3.1.6:
+    It is necessary to copy libxul.so and libxpcom.so from
+    /usr/lib/xulrunner-*/ into /usr/lib/tunderbird-*/ folder. See issue #4.
+    I'am thankful for any hints why this Problem exists. And status
+    on different distributions (no problem on gentoo).
+
+--
+#4: https://github.com/mdlavin/firefox-gnome-keyring/issues/#issue/4
 
