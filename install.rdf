@@ -26,7 +26,8 @@
       </Description>
     </em:targetApplication>
 
-    <em:targetPlatform>ARCHITECTURE</em:targetPlatform>
+    <em:targetPlatform>Linux_x86-gcc3</em:targetPlatform>
+    <em:targetPlatform>Linux_x86_64-gcc3</em:targetPlatform>
 
     <em:name>Gnome-keyring password integration</em:name>
     <em:description>An extension to enable passwords and form logins to be stored in gnome-keyring</em:description>
