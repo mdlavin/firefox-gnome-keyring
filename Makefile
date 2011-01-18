@@ -1,9 +1,9 @@
-CPPFLAGS += -fno-rtti -fno-exceptions -shared -fPIC
+CPPFLAGS += -fno-rtti -fno-exceptions -shared -fPIC -g
 
-DEPENDENCY_CFLAGS = `pkg-config --cflags libxul gnome-keyring-1`
+DEPENDENCY_CFLAGS = `pkg-config --cflags libxul gnome-keyring-1` -DMOZ_NO_MOZALLOC
 GNOME_LDFLAGS     = `pkg-config --libs gnome-keyring-1`
-XUL_LDFLAGS       = `pkg-config --libs libxul ` -L lib/i386
-VERSION           = 0.4.2
+XUL_LDFLAGS       = `pkg-config --libs libxul | sed 's/xpcomglue_s/xpcomglue_s_nomozalloc/' | sed 's/-lmozalloc//'` -L lib/i386
+VERSION           = 0.5.0
 FILES             = GnomeKeyring.cpp
 
 TARGET = libgnomekeyring.so

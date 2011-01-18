@@ -39,10 +39,11 @@ extern "C" {
 #include "gnome-keyring.h"
 }
 
+
 #define GNOMEKEYRING_CID \
 { 0xda355706, 0x2b26, 0x4682, { 0xbe, 0x76, 0xd6, 0x87, 0x13, 0x12, 0xd3, 0xa1}}
 
-static const char kGnomeKeyringContractID[] = "@mozilla.org/gnome-keyring;1";
+#define GNOMEPASSWORD_CONTRACTID "@mozilla.org/gnome-keyring;1"
 
 #ifdef PR_LOGGING
 // (NSPR_LOG_MODULES=GnomeKeyringLog:5)

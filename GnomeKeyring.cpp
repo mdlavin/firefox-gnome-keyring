@@ -26,7 +26,7 @@
  * either the GNU General Public License Version 2 or later (the "GPL"), or
  * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
  * in which case the provisions of the GPL or the LGPL are applicable instead
- * of those above. If you wish to allow use of your version of this file only
+-8 * of those above. If you wish to allow use of your version of this file only
  * under the terms of either the GPL or the LGPL, and not to allow others to
  * use your version of this file under the terms of the MPL, indicate your
  * decision by deleting the provisions above and replace them with the notice
@@ -37,11 +37,10 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "GnomeKeyring.h"
+#include "nsMemory.h"
 #include "nsILoginInfo.h"
 
-#include "nsIGenericFactory.h"
-#include "nsMemory.h"
-#include "nsICategoryManager.h"
+#include "mozilla/ModuleUtils.h"
 #include "nsComponentManagerUtils.h"
 #include "nsStringAPI.h"
 #include "nsIXULAppInfo.h"
@@ -475,7 +474,25 @@ findLogins(const nsAString & aHostname,
 }
 
 /* Implementation file */
-NS_IMPL_ISUPPORTS1(GnomeKeyring, nsILoginManagerStorage)
+
+/// The following code works around the problem that newILoginManagerStorage has a new UUID in 
+/// Firefox 4.0, but this component should be compatible with both 3.6 and 4.0.
+
+#define LOGIN_MANAGER_STORAGE_3_6_CID {0xe66c97cd, 0x3bcf, 0x4eee, { 0x99, 0x37, 0x38, 0xf6, 0x50, 0x37, 0x2d, 0x77 }}
+NS_DEFINE_NAMED_CID(LOGIN_MANAGER_STORAGE_3_6_CID);
+
+NS_IMPL_ADDREF(GnomeKeyring)
+NS_IMPL_RELEASE(GnomeKeyring)
+
+NS_INTERFACE_MAP_BEGIN(GnomeKeyring)
+NS_INTERFACE_MAP_ENTRY(nsILoginManagerStorage)
+  if ( aIID.Equals(kLOGIN_MANAGER_STORAGE_3_6_CID ) )
+    foundInterface = static_cast<nsILoginManagerStorage*>(this);
+  else
+NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsILoginManagerStorage)
+NS_INTERFACE_MAP_END
+
+// End code to deal with 4.0  / 3.6 compatibility
 
 NS_IMETHODIMP GnomeKeyring::Init()
 {
@@ -806,48 +823,66 @@ NS_IMETHODIMP GnomeKeyring::CountLogins(const nsAString & aHostname,
   return NS_OK;
 }
 
+/**
+  * True when a master password prompt is being shown.
+  */
+/* readonly attribute boolean uiBusy; */
+NS_IMETHODIMP GnomeKeyring::GetUiBusy(PRBool *aUiBusy) 
+{
+  *aUiBusy = FALSE;
+  return NS_OK;
+}
+
+
 
 /* End of implementation class template. */
 
-static NS_METHOD
-GnomeKeyringRegisterSelf(nsIComponentManager *compMgr, nsIFile *path,
-                         const char *loaderStr, const char *type,
-                         const nsModuleComponentInfo *info)
-{
-  nsCOMPtr<nsICategoryManager> cat =
-      do_GetService(NS_CATEGORYMANAGER_CONTRACTID);
-  NS_ENSURE_STATE(cat);
-
-  cat->AddCategoryEntry("login-manager-storage", "nsILoginManagerStorage",
-                        kGnomeKeyringContractID, PR_TRUE, PR_TRUE, nsnull);
-  return NS_OK;
-}
-
-static NS_METHOD
-GnomeKeyringUnregisterSelf(nsIComponentManager *compMgr, nsIFile *path,
-                           const char *loaderStr,
-                           const nsModuleComponentInfo *info)
-{
-  nsCOMPtr<nsICategoryManager> cat =
-      do_GetService(NS_CATEGORYMANAGER_CONTRACTID);
-  NS_ENSURE_STATE(cat);
-
-  cat->DeleteCategoryEntry("login-manager-storage", "nsILoginManagerStorage",
-                           PR_TRUE);
-  return NS_OK;
-}
-
 NS_GENERIC_FACTORY_CONSTRUCTOR(GnomeKeyring)
 
-static const nsModuleComponentInfo components[] = {
-  {
-    "GnomeKeyring",
-    GNOMEKEYRING_CID,
-    kGnomeKeyringContractID,
-    GnomeKeyringConstructor,
-    GnomeKeyringRegisterSelf,
-    GnomeKeyringUnregisterSelf
-  }
+NS_DEFINE_NAMED_CID(GNOMEKEYRING_CID);
+
+// Build a table of ClassIDs (CIDs) which are implemented by this module. CIDs
+// should be completely unique UUIDs.
+// each entry has the form { CID, service, factoryproc, constructorproc }
+// where factoryproc is usually NULL.
+static const mozilla::Module::CIDEntry kPasswordsCIDs[] = {
+    { &kGNOMEKEYRING_CID, false, NULL, GnomeKeyringConstructor },
+    { NULL }
 };
 
-NS_IMPL_NSGETMODULE(GnomeKeyring, components)
+// Build a table which maps contract IDs to CIDs.
+// A contract is a string which identifies a particular set of functionality. In some
+// cases an extension component may override the contract ID of a builtin gecko component
+// to modify or extend functionality.
+static const mozilla::Module::ContractIDEntry kPasswordsContracts[] = {
+    { GNOMEPASSWORD_CONTRACTID, &kGNOMEKEYRING_CID },
+    { NULL }
+};
+
+// Category entries are category/key/value triples which can be used
+// to register contract ID as content handlers or to observe certain
+// notifications. Most modules do not need to register any category
+// entries: this is just a sample of how you'd do it.
+// @see nsICategoryManager for information on retrieving category data.
+static const mozilla::Module::CategoryEntry kPasswordsCategories[] = {
+    { "login-manager-storage", "nsILoginManagerStorage", GNOMEPASSWORD_CONTRACTID },
+    { NULL }
+};
+
+static const mozilla::Module kPasswordsModule = {
+    mozilla::Module::kVersion,
+    kPasswordsCIDs,
+    kPasswordsContracts,
+    kPasswordsCategories
+};
+
+
+// The following line implements the one-and-only "NSModule" symbol exported from this
+// shared library.
+NSMODULE_DEFN(nsGnomeKeypassModule) = &kPasswordsModule;
+
+// The following line implements the one-and-only "NSGetModule" symbol
+// for compatibility with mozilla 1.9.2. You should only use this
+// if you need a binary which is backwards-compatible and if you use
+// interfaces carefully across multiple versions.
+NS_IMPL_MOZILLA192_NSGETMODULE(&kPasswordsModule)
