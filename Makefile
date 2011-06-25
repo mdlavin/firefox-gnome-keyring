@@ -5,7 +5,7 @@ XUL_PKG_NAME := $(shell (pkg-config --atleast-version=2.0 libxul && echo libxul)
 DEPENDENCY_CFLAGS = `pkg-config --cflags libxul gnome-keyring-1` -DMOZ_NO_MOZALLOC
 GNOME_LDFLAGS     = `pkg-config --libs gnome-keyring-1`
 XUL_LDFLAGS       = `pkg-config --libs ${XUL_PKG_NAME} | sed 's/xpcomglue_s/xpcomglue_s_nomozalloc/' | sed 's/-lmozalloc//'` -L lib/i386
-VERSION           = 0.5.0
+VERSION           = 0.5.1
 FILES             = GnomeKeyring.cpp
 
 TARGET = libgnomekeyring.so
