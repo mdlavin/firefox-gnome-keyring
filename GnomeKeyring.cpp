@@ -69,7 +69,7 @@ PRLogModuleInfo *gGnomeKeyringLog;
  */
 nsCString keyringName;
 
-// XXX should use profile identifier instead of a constant
+// TODO should use profile identifier instead of a constant
 #define UNIQUE_PROFILE_ID "v1"
 
 const char *kLoginInfoMagicAttrName = "mozLoginInfoMagic";
@@ -342,7 +342,7 @@ foundToHost(GnomeKeyringFound* found)
       host = NS_StringCloneData(NS_ConvertUTF8toUTF16(attrValue));
   }
 
-  // XXX what to do in that case?
+  // TODO what to do in that case?
   if (!host)
     host = NS_StringCloneData(NS_ConvertASCIItoUTF16("undefined"));
 
@@ -779,7 +779,7 @@ NS_IMETHODIMP GnomeKeyring::SetLoginSavingEnabled(const nsAString & aHost,
     return deleteFoundItems(foundList, PR_TRUE);
   }
 
-  // XXX should check if host is already enabled
+  // TODO should check if host is already enabled
 
   GnomeKeyringAttributeList *attributes;
 
@@ -789,7 +789,7 @@ NS_IMETHODIMP GnomeKeyring::SetLoginSavingEnabled(const nsAString & aHost,
   gnome_keyring_attribute_list_append_string(attributes,
             kDisabledHostAttrName, NS_ConvertUTF16toUTF8(aHost).get());
 
-  // XXX name should be more explicit
+  // TODO name should be more explicit
   const char* name = "Mozilla disabled host entry";
   guint itemId;
 
