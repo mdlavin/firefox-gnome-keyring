@@ -143,7 +143,7 @@ GnomeKeyring::buildAttributeList(nsILoginInfo *aLogin)
   aLogin->GetHostname(s);
   gnome_keyring_attribute_list_append_string(attributes, kHostnameAttr,
                                              NS_ConvertUTF16toUTF8(s).get());
-  
+
 //  formSubmitURL and httpRealm are not guaranteed to be set.
 
   aLogin->GetFormSubmitURL(s);
@@ -217,7 +217,7 @@ void GnomeKeyring::appendAttributesFromBag(nsIPropertyBag *matchData,
 					       NS_ConvertUTF16toUTF8(s).get());
     }
   }
-                                      
+
   property.AssignLiteral(kUsernameFieldAttr);
   result = matchData->GetProperty(property, getter_AddRefs(propValue));
   if ( result != NS_ERROR_FAILURE ) {
@@ -226,7 +226,7 @@ void GnomeKeyring::appendAttributesFromBag(nsIPropertyBag *matchData,
                                                kUsernameFieldAttr,
 					       NS_ConvertUTF16toUTF8(s).get());
   }
-    
+
   property.AssignLiteral(kPasswordFieldAttr);
   result = matchData->GetProperty(property, getter_AddRefs(propValue));
   if ( result != NS_ERROR_FAILURE ) {
@@ -235,7 +235,7 @@ void GnomeKeyring::appendAttributesFromBag(nsIPropertyBag *matchData,
                                                kPasswordFieldAttr,
 					       NS_ConvertUTF16toUTF8(s).get());
   }
-  
+
   property.AssignLiteral(kUsernameAttr);
   result = matchData->GetProperty(property, getter_AddRefs(propValue));
   if ( result != NS_ERROR_FAILURE ) {
@@ -273,7 +273,7 @@ nsresult GnomeKeyring::deleteFoundItems(GList* foundList,
   return NS_OK;
 }
 
-nsILoginInfo* 
+nsILoginInfo*
 loginToLogin(nsILoginInfo* found)
 {
   return found;
@@ -403,14 +403,14 @@ checkAttribute(const char* valuePattern, const char* value, bool* isMatch)
     if (!strcmp("", valuePattern)) {
       return;
     }
-    
+
     if (strcmp(valuePattern, value)) {
       *isMatch = FALSE;
     }
   }
 }
 
-template<class T> 
+template<class T>
 GnomeKeyringResult
 findLogins(const nsAString & aHostname,
            const nsAString & aActionURL,
@@ -426,7 +426,7 @@ findLogins(const nsAString & aHostname,
    * instance around, so the string .get() returns won't be free'd */
   gnome_keyring_attribute_list_append_string(attributes, kHostnameAttr,
 					     NS_ConvertUTF16toUTF8(aHostname).get());
-  
+
   GList* unfiltered;
   GnomeKeyringResult result = gnome_keyring_find_items_sync(
                                         GNOME_KEYRING_ITEM_GENERIC_SECRET,
@@ -475,7 +475,7 @@ findLogins(const nsAString & aHostname,
 
 /* Implementation file */
 
-/// The following code works around the problem that newILoginManagerStorage has a new UUID in 
+/// The following code works around the problem that newILoginManagerStorage has a new UUID in
 /// Firefox 4.0, but this component should be compatible with both 3.6 and 4.0.
 
 #define LOGIN_MANAGER_STORAGE_3_6_CID {0xe66c97cd, 0x3bcf, 0x4eee, { 0x99, 0x37, 0x38, 0xf6, 0x50, 0x37, 0x2d, 0x77 }}
@@ -497,7 +497,7 @@ NS_INTERFACE_MAP_END
 NS_IMETHODIMP GnomeKeyring::Init()
 {
   nsresult ret;
-  nsCOMPtr<nsIServiceManager> servMan; 
+  nsCOMPtr<nsIServiceManager> servMan;
   nsCOMPtr<nsIPrefService> prefService;
   nsCOMPtr<nsIPrefBranch> pref;
 #ifdef PR_LOGGING
@@ -527,7 +527,7 @@ NS_IMETHODIMP GnomeKeyring::Init()
         }
       }
     }
-  } 
+  }
 
 /* Create the password keyring, it doesn't hurt if it already exists */
   GnomeKeyringResult result = gnome_keyring_create_sync(keyringName.get(), NULL);
@@ -586,7 +586,7 @@ NS_IMETHODIMP GnomeKeyring::RemoveLogin(nsILoginInfo *aLogin)
 NS_IMETHODIMP GnomeKeyring::ModifyLogin(nsILoginInfo *oldLogin,
                                         nsISupports *modLogin)
 {
-  /* If the second argument is an nsILoginInfo, 
+  /* If the second argument is an nsILoginInfo,
    * just remove the old login and add the new one */
 
   nsresult interfaceok;
@@ -596,7 +596,7 @@ NS_IMETHODIMP GnomeKeyring::ModifyLogin(nsILoginInfo *oldLogin,
     rv |= AddLogin(newLogin);
   return rv;
   } /* Otherwise, it has to be an nsIPropertyBag.
-     * Let's get the attributes from the old login, then append the ones 
+     * Let's get the attributes from the old login, then append the ones
      * fetched from the property bag. Gracefully, if an attribute appears
      * twice in an attribut list, the last value is stored. */
     else {
@@ -604,7 +604,7 @@ NS_IMETHODIMP GnomeKeyring::ModifyLogin(nsILoginInfo *oldLogin,
     if (interfaceok == NS_OK) {
       GnomeKeyringAttributeList *attributes = buildAttributeList(oldLogin);
       AutoFoundList foundList;
-      
+
       GnomeKeyringResult result = gnome_keyring_find_items_sync(
                                   GNOME_KEYRING_ITEM_GENERIC_SECRET,
                                   attributes, &foundList);
@@ -620,12 +620,12 @@ NS_IMETHODIMP GnomeKeyring::ModifyLogin(nsILoginInfo *oldLogin,
       appendAttributesFromBag(static_cast<nsIPropertyBag*>(matchData), attributes);
 
       // We need the id of the keyring item to set its attributes.
- 
+
       PRUint32 i = 0, id;
       for (GList* l = foundList; l != NULL; l = l->next, i++)
       {
         GnomeKeyringFound* found = static_cast<GnomeKeyringFound*>(l->data);
-        id = found->item_id; 
+        id = found->item_id;
         if (i >= 1){
           return NS_ERROR_FAILURE;
         }
@@ -640,7 +640,7 @@ NS_IMETHODIMP GnomeKeyring::ModifyLogin(nsILoginInfo *oldLogin,
     } else return interfaceok;
   }
 }
- 
+
 
 NS_IMETHODIMP GnomeKeyring::RemoveAllLogins()
 {
@@ -703,14 +703,14 @@ NS_IMETHODIMP GnomeKeyring::SearchLogins(PRUint32 *count,
   AutoFoundList foundList;
   GnomeKeyringAttributeList *attributes = gnome_keyring_attribute_list_new();
   appendAttributesFromBag(matchData, attributes);
-  
+
   GnomeKeyringResult result = gnome_keyring_find_items_sync(
                                         GNOME_KEYRING_ITEM_GENERIC_SECRET,
                                         attributes,
                                         &foundList );
   GK_ENSURE_SUCCESS_BUGGY(result);
   gnome_keyring_attribute_list_free(attributes);
-  return foundListToArray(foundToLoginInfo, foundList, count, logins); 
+  return foundListToArray(foundToLoginInfo, foundList, count, logins);
 
 }
 NS_IMETHODIMP GnomeKeyring::GetAllEncryptedLogins(unsigned int*,
@@ -803,7 +803,7 @@ NS_IMETHODIMP GnomeKeyring::SetLoginSavingEnabled(const nsAString & aHost,
   return NS_OK;
 }
 
-NS_IMETHODIMP GnomeKeyring::CountLogins(const nsAString & aHostname, 
+NS_IMETHODIMP GnomeKeyring::CountLogins(const nsAString & aHostname,
                                         const nsAString & aActionURL,
                                         const nsAString & aHttpRealm,
                                         PRUint32 *_retval)
@@ -827,7 +827,7 @@ NS_IMETHODIMP GnomeKeyring::CountLogins(const nsAString & aHostname,
   * True when a master password prompt is being shown.
   */
 /* readonly attribute boolean uiBusy; */
-NS_IMETHODIMP GnomeKeyring::GetUiBusy(PRBool *aUiBusy) 
+NS_IMETHODIMP GnomeKeyring::GetUiBusy(PRBool *aUiBusy)
 {
   *aUiBusy = FALSE;
   return NS_OK;
