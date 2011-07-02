@@ -26,7 +26,7 @@
  * either the GNU General Public License Version 2 or later (the "GPL"), or
  * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
  * in which case the provisions of the GPL or the LGPL are applicable instead
--8 * of those above. If you wish to allow use of your version of this file only
+ * of those above. If you wish to allow use of your version of this file only
  * under the terms of either the GPL or the LGPL, and not to allow others to
  * use your version of this file under the terms of the MPL, indicate your
  * decision by deleting the provisions above and replace them with the notice
@@ -505,28 +505,30 @@ NS_IMETHODIMP GnomeKeyring::Init()
 #endif
   keyringName.AssignLiteral("mozilla");
   ret = NS_GetServiceManager(getter_AddRefs(servMan));
-  if (ret == NS_OK) {
-    ret = servMan->
-      GetServiceByContractID("@mozilla.org/preferences-service;1",
-                             NS_GET_IID(nsIPrefService),
-                             getter_AddRefs(prefService));
-    if (ret == NS_OK) {
-    ret = prefService->ReadUserPrefs(nsnull);
-      if (ret == NS_OK) {
-        ret = prefService->
-          GetBranch("extensions.gnome-keyring.", getter_AddRefs(pref));
-        if (ret == NS_OK) {
-          PRInt32 prefType;
-          ret = pref->GetPrefType("keyringName", &prefType);
-          if ((ret == NS_OK) && (prefType == 32)) {
-            char* tempKeyringName;
-            pref->GetCharPref("keyringName", &tempKeyringName);
-            keyringName = tempKeyringName;
-            if ( keyringName.IsVoid() ) keyringName.AssignLiteral("mozilla");
-          }
-        }
-      }
-    }
+  if (ret != NS_OK) { return ret; }
+
+  ret = servMan->
+    GetServiceByContractID("@mozilla.org/preferences-service;1",
+                           NS_GET_IID(nsIPrefService),
+                           getter_AddRefs(prefService));
+  if (ret != NS_OK) { return ret; }
+
+  ret = prefService->ReadUserPrefs(nsnull);
+  if (ret != NS_OK) { return ret; }
+
+  ret = prefService->
+    GetBranch("extensions.gnome-keyring.", getter_AddRefs(pref));
+  if (ret != NS_OK) { return ret; }
+
+  PRInt32 prefType;
+  ret = pref->GetPrefType("keyringName", &prefType);
+  if (ret != NS_OK) { return ret; }
+
+  if (prefType == 32) {
+    char* tempKeyringName;
+    pref->GetCharPref("keyringName", &tempKeyringName);
+    keyringName = tempKeyringName;
+    if ( keyringName.IsVoid() ) keyringName.AssignLiteral("mozilla");
   }
 
 /* Create the password keyring, it doesn't hurt if it already exists */
