@@ -36,6 +36,6 @@ build-library-x86: $(FILES) Makefile
 build: build-xpi
 
 clean:
-	rm $(TARGET)
-	rm -r xpi/
-	rm gnome-keyring_password_integration-$(VERSION).xpi
+	rm -f $(TARGET)
+	rm -f -r xpi/platform/
+	rm -f gnome-keyring_password_integration-$(VERSION).xpi

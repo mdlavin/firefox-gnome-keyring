@@ -1,0 +1,11 @@
+# Build dependencies
+
+$ aptitude install libgnome-keyring-dev xulrunner-dev zip
+
+# currently you need xulrunner-dev >= 5.0 from experimental
+# add it to your sources.list, then:
+$ aptitude -t experimental install xulrunner-dev
+
+# Build command
+
+$ CPPFLAGS="-I/usr/include/gnome-keyring-1 -I/usr/include/xulrunner-5.0/" make
