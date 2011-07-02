@@ -104,7 +104,7 @@ const char *kPasswordAttr = "password";
 #define GK_ENSURE_SUCCESS_BUGGY(x)                            \
   PR_BEGIN_MACRO                                              \
     if (x != GNOME_KEYRING_RESULT_OK &&                       \
-        x != GNOME_KEYRING_RESULT_NO_MATCH) {		      \
+        x != GNOME_KEYRING_RESULT_NO_MATCH) {                 \
        NS_WARNING("GK_ENSURE_SUCCESS_BUGGY(" #x ") failed");  \
        return NS_ERROR_FAILURE;                               \
     }                                                         \
@@ -144,7 +144,7 @@ GnomeKeyring::buildAttributeList(nsILoginInfo *aLogin)
   gnome_keyring_attribute_list_append_string(attributes, kHostnameAttr,
                                              NS_ConvertUTF16toUTF8(s).get());
 
-//  formSubmitURL and httpRealm are not guaranteed to be set.
+  // formSubmitURL and httpRealm are not guaranteed to be set.
 
   aLogin->GetFormSubmitURL(s);
   if (!s.IsVoid()) {
@@ -175,7 +175,8 @@ GnomeKeyring::buildAttributeList(nsILoginInfo *aLogin)
   return attributes;
 }
 
-void GnomeKeyring::appendAttributesFromBag(nsIPropertyBag *matchData,
+void
+GnomeKeyring::appendAttributesFromBag(nsIPropertyBag *matchData,
                                     GnomeKeyringAttributeList * &attributes)
 {
   nsAutoString s, property, propName;
@@ -213,8 +214,8 @@ void GnomeKeyring::appendAttributesFromBag(nsIPropertyBag *matchData,
     propValue->GetAsAString(s);
     if (!s.IsVoid()){
       gnome_keyring_attribute_list_append_string(attributes,
-                                               kHttpRealmAttr,
-					       NS_ConvertUTF16toUTF8(s).get());
+                                                 kHttpRealmAttr,
+                                                 NS_ConvertUTF16toUTF8(s).get());
     }
   }
 
@@ -224,7 +225,7 @@ void GnomeKeyring::appendAttributesFromBag(nsIPropertyBag *matchData,
     propValue->GetAsAString(s);
     gnome_keyring_attribute_list_append_string(attributes,
                                                kUsernameFieldAttr,
-					       NS_ConvertUTF16toUTF8(s).get());
+                                               NS_ConvertUTF16toUTF8(s).get());
   }
 
   property.AssignLiteral(kPasswordFieldAttr);
@@ -233,7 +234,7 @@ void GnomeKeyring::appendAttributesFromBag(nsIPropertyBag *matchData,
     propValue->GetAsAString(s);
     gnome_keyring_attribute_list_append_string(attributes,
                                                kPasswordFieldAttr,
-					       NS_ConvertUTF16toUTF8(s).get());
+                                               NS_ConvertUTF16toUTF8(s).get());
   }
 
   property.AssignLiteral(kUsernameAttr);
@@ -242,12 +243,13 @@ void GnomeKeyring::appendAttributesFromBag(nsIPropertyBag *matchData,
     propValue->GetAsAString(s);
     gnome_keyring_attribute_list_append_string(attributes,
                                                kUsernameAttr,
-					       NS_ConvertUTF16toUTF8(s).get());
+                                               NS_ConvertUTF16toUTF8(s).get());
     }
 
 }
 
-nsresult GnomeKeyring::deleteFoundItems(GList* foundList,
+nsresult
+GnomeKeyring::deleteFoundItems(GList* foundList,
                                  PRBool aExpectOnlyOne = PR_FALSE)
 {
   if (foundList == NULL) {
@@ -415,8 +417,8 @@ GnomeKeyringResult
 findLogins(const nsAString & aHostname,
            const nsAString & aActionURL,
            const nsAString & aHttpRealm,
-	   void (*foundLogin)(GnomeKeyringFound* found, T data),
-	   T data)
+           void (*foundLogin)(GnomeKeyringFound* found, T data),
+           T data)
 {
   GnomeKeyringAttributeList *attributes = gnome_keyring_attribute_list_new();
 
@@ -425,7 +427,7 @@ findLogins(const nsAString & aHostname,
   /* Convert to UTF-8 (but keep a reference to the NS_ConvertUTF16ToUTF8
    * instance around, so the string .get() returns won't be free'd */
   gnome_keyring_attribute_list_append_string(attributes, kHostnameAttr,
-					     NS_ConvertUTF16toUTF8(aHostname).get());
+                                             NS_ConvertUTF16toUTF8(aHostname).get());
 
   GList* unfiltered;
   GnomeKeyringResult result = gnome_keyring_find_items_sync(
@@ -450,16 +452,15 @@ findLogins(const nsAString & aHostname,
 
     for (PRUint32 i = 0; i < found->attributes->len; i++) {
       if (attrArray[i].type != GNOME_KEYRING_ATTRIBUTE_TYPE_STRING)
-	continue;
+        continue;
 
       const char *attrName = attrArray[i].name;
       const char *attrValue = attrArray[i].value.string;
 
       if (!strcmp(attrName, kFormSubmitURLAttr)) {
-	checkAttribute(tempActionUrl, attrValue, &isMatch);
-      } else
-      if (!strcmp(attrName, kHttpRealmAttr)) {
-	checkAttribute(tempHttpRealm, attrValue, &isMatch);
+        checkAttribute(tempActionUrl, attrValue, &isMatch);
+      } else if (!strcmp(attrName, kHttpRealmAttr)) {
+        checkAttribute(tempHttpRealm, attrValue, &isMatch);
       }
     }
 
@@ -688,10 +689,10 @@ NS_IMETHODIMP GnomeKeyring::FindLogins(PRUint32 *count,
   GList* allFound = NULL;
 
   GnomeKeyringResult result = findLogins(aHostname,
-					 aActionURL,
-					 aHttpRealm,
-					 convertAndCollectLogins,
-					 &allFound);
+                                         aActionURL,
+                                         aHttpRealm,
+                                         convertAndCollectLogins,
+                                         &allFound);
 
   GK_ENSURE_SUCCESS_BUGGY(result);
 
@@ -814,10 +815,10 @@ NS_IMETHODIMP GnomeKeyring::CountLogins(const nsAString & aHostname,
   int count=0;
 
   result = findLogins(aHostname,
-		      aActionURL,
-		      aHttpRealm,
-		      countFoundLogins,
-		      &count);
+                      aActionURL,
+                      aHttpRealm,
+                      countFoundLogins,
+                      &count);
 
   GK_ENSURE_SUCCESS_BUGGY(result);
 
