@@ -8,4 +8,4 @@ $ aptitude -t experimental install xulrunner-dev
 
 # Build command
 
-$ CPPFLAGS="-I/usr/include/gnome-keyring-1 -I/usr/include/xulrunner-5.0/" make
+$ make

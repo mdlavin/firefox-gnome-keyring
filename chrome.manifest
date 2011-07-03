@@ -1,0 +1,1 @@
+binary-component platform/${PLATFORM}/components/libgnomekeyring.so ABI=${PLATFORM}
