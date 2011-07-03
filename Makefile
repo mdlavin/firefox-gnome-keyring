@@ -35,6 +35,8 @@ build-library-x86: $(FILES) Makefile
 
 build: build-xpi
 
+all: build
+
 clean:
 	rm -f $(TARGET)
 	rm -f -r xpi/platform/
