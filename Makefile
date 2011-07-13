@@ -4,38 +4,35 @@ XUL_PKG_NAME := $(shell (pkg-config --atleast-version=2.0 libxul && echo libxul)
 
 DEPENDENCY_CFLAGS = `pkg-config --cflags libxul gnome-keyring-1` -DMOZ_NO_MOZALLOC
 GNOME_LDFLAGS     = `pkg-config --libs gnome-keyring-1`
-XUL_LDFLAGS       = `pkg-config --libs ${XUL_PKG_NAME} | sed 's/xpcomglue_s/xpcomglue_s_nomozalloc/' | sed 's/-lmozalloc//'` -L lib/i386
-VERSION           = 0.5.1
+XUL_LDFLAGS       = `pkg-config --libs ${XUL_PKG_NAME} | sed 's/xpcomglue_s/xpcomglue_s_nomozalloc/' | sed 's/-lmozalloc//'`
+PLATFORM          = `gcc --version --verbose 2>&1 | grep 'Target:' | cut '-d ' -f2`
+VERSION           = `git describe --tags`
 FILES             = GnomeKeyring.cpp
 
 TARGET = libgnomekeyring.so
 XPI_TARGET = gnome-keyring_password_integration-$(VERSION).xpi
 
-build-xpi: build-library-x86_64 build-library-x86
+build-xpi: build-library
 	mkdir -p xpi
-	cp install.rdf xpi/install.rdf
-	sed -i 's/<em:version>.*<\/em:version>/<em:version>$(VERSION)<\/em:version>/' xpi/install.rdf
+	sed -e 's/$${PLATFORM}/'$(PLATFORM)'/g' \
+	    -e 's/$${VERSION}/'$(VERSION)'/g' \
+	    install.rdf > xpi/install.rdf
+	sed -e 's/$${PLATFORM}/'$(PLATFORM)'/g' \
+	    chrome.manifest > xpi/chrome.manifest
 	cd xpi && zip -r ../$(XPI_TARGET) *
 
-
-build-library-x86_64: ARCH=x86_64
-build-library-x86_64: $(FILES) Makefile
-	mkdir -p xpi/platform/Linux_$(ARCH)-gcc3/components
-	$(CXX) $(FILES) -g -Wall -o xpi/platform/Linux_$(ARCH)-gcc3/components/$(TARGET) ${DEPENDENCY_CFLAGS} ${XUL_LDFLAGS} ${GNOME_LDFLAGS} ${CPPFLAGS} ${CXXFLAGS} ${GECKO_DEFINES}
-	chmod +x xpi/platform/Linux_$(ARCH)-gcc3/components/$(TARGET)
-
-
-build-library-x86: ARCH=x86
-build-library-x86: CPPFLAGS:=$(CPPFLAGS) -m32
-build-library-x86: $(FILES) Makefile
-	mkdir -p xpi/platform/Linux_$(ARCH)-gcc3/components
-	$(CXX) $(FILES) -g -Wall -o xpi/platform/Linux_$(ARCH)-gcc3/components/$(TARGET) $(DEPENDENCY_CFLAGS) $(XUL_LDFLAGS) $(GNOME_LDFLAGS) $(CPPFLAGS) $(CXXFLAGS) $(GECKO_DEFINES)
-	chmod +x xpi/platform/Linux_$(ARCH)-gcc3/components/$(TARGET)
-
+build-library: $(FILES) Makefile
+	mkdir -p xpi/platform/$(PLATFORM)/components
+	$(CXX) $(FILES) -g -Wall -o xpi/platform/$(PLATFORM)/components/$(TARGET) \
+	    $(DEPENDENCY_CFLAGS) $(XUL_LDFLAGS) $(GNOME_LDFLAGS) $(CPPFLAGS) \
+	    $(CXXFLAGS) $(GECKO_DEFINES)
+	chmod +x xpi/platform/$(PLATFORM)/components/$(TARGET)
 
 build: build-xpi
 
+all: build
+
 clean:
-	rm $(TARGET)
-	rm -r xpi/
-	rm gnome-keyring_password_integration-$(VERSION).xpi
+	rm -f $(TARGET)
+	rm -f -r xpi
+	rm -f gnome-keyring_password_integration-$(VERSION).xpi
