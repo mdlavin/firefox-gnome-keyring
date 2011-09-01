@@ -1,12 +1,15 @@
-CPPFLAGS += -fno-rtti -fno-exceptions -shared -fPIC -g
+CPPFLAGS += -fno-rtti -fno-exceptions -shared -fPIC -g -std=gnu++0x
 
 XUL_PKG_NAME := $(shell (pkg-config --atleast-version=2.0 libxul && echo libxul) || (pkg-config libxul2 && echo libxul2) || (echo libxul-is-missing))
 
 DEPENDENCY_CFLAGS = `pkg-config --cflags libxul gnome-keyring-1` -DMOZ_NO_MOZALLOC
 GNOME_LDFLAGS     = `pkg-config --libs gnome-keyring-1`
 XUL_LDFLAGS       = `pkg-config --libs ${XUL_PKG_NAME} | sed 's/xpcomglue_s/xpcomglue_s_nomozalloc/' | sed 's/-lmozalloc//'`
-PLATFORM          = `gcc --version --verbose 2>&1 | grep 'Target:' | cut '-d ' -f2`
-VERSION           = `git describe --tags`
+ARCH := $(shell uname -m)
+# Update the ARCH variable so that the Mozilla architectures are used
+ARCH := $(shell echo ${ARCH} | sed 's/i686/x86/')
+PLATFORM          = Linux_$(ARCH)-gcc3
+VERSION           = `git describe --tags || date +dev-%s`
 FILES             = GnomeKeyring.cpp
 
 TARGET = libgnomekeyring.so
