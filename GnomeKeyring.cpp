@@ -152,7 +152,13 @@ const char *kDisabledHostAttrName = "disabledHost";
       kDisabledHostMagicAttrName, kDisabledHostMagicAttrValue); \
   }
 
-// Wrapper to automatically free the found list when going out of scope
+/**
+ * Wrapper to automatically free the found list when going out of scope.
+ *
+ * Uses gnome_keyring_found_list_free(), which will free the GList as well as
+ * all the elements - so do not store pointers to any of them for longer than
+ * the lifetime of this list.
+ */
 class AutoFoundList {
   public:
     AutoFoundList() : mFoundList(nsnull) { }
@@ -270,12 +276,6 @@ GnomeKeyring::deleteFoundItems(GList* foundList,
 }
 
 nsILoginInfo*
-loginToLogin(nsILoginInfo* found)
-{
-  return found;
-}
-
-nsILoginInfo*
 foundToLoginInfo(GnomeKeyringFound* found)
 {
   nsCOMPtr<nsILoginInfo> loginInfo = do_CreateInstance(NS_LOGININFO_CONTRACTID);
@@ -343,9 +343,9 @@ foundToHost(GnomeKeyringFound* found)
   return host;
 }
 
-template<class T, class T2>
+template<class T>
 nsresult
-foundListToArray(T (*aFoundToObject)(T2 found),
+foundListToArray(T (*aFoundToObject)(GnomeKeyringFound* found),
                  GList* aFoundList, PRUint32 *aCount, T **aArray)
 {
   PRUint32 count = 0;
@@ -363,7 +363,7 @@ foundListToArray(T (*aFoundToObject)(T2 found),
 
   PRUint32 i = 0;
   for (GList* l = aFoundList; l != NULL; l = l->next, i++) {
-    T2 found = static_cast<T2>(l->data);
+    GnomeKeyringFound* found = static_cast<GnomeKeyringFound*>(l->data);
     GK_LOG(("Found item with id %i\n", found->item_id));
 
     T obj = aFoundToObject(found);
@@ -374,19 +374,6 @@ foundListToArray(T (*aFoundToObject)(T2 found),
   *aCount = count;
   *aArray = array;
   return NS_OK;
-}
-
-void
-convertAndCollectLogins(GnomeKeyringFound* found, GList **aFoundList)
-{
-  nsILoginInfo* info = foundToLoginInfo(found);
-  *aFoundList = g_list_append(*aFoundList, info);
-}
-
-void
-countFoundLogins(GnomeKeyringFound* found, int* count)
-{
-  (*count) = (*count)+1;
 }
 
 void
@@ -407,14 +394,14 @@ checkAttribute(const char* valuePattern, const char* value, bool* isMatch)
   }
 }
 
-template<class T>
 GnomeKeyringResult
 findLogins(const nsAString & aHostname,
            const nsAString & aActionURL,
            const nsAString & aHttpRealm,
-           void (*foundLogin)(GnomeKeyringFound* found, T data),
-           T data)
+           GList **aFoundList)
 {
+  *aFoundList = NULL;
+
   GnomeKeyringAttributeList *attributes = gnome_keyring_attribute_list_new();
   GKATTR_MAGIC_LI(attributes);
 
@@ -458,10 +445,12 @@ findLogins(const nsAString & aHostname,
     }
 
     if (isMatch) {
-      foundLogin(found, data);
+      *aFoundList = g_list_append(*aFoundList, found);
+    } else {
+      gnome_keyring_found_free(found);
     }
   }
-  gnome_keyring_found_list_free(unfiltered);
+  g_list_free(unfiltered);
 
   return result;
 }
@@ -787,18 +776,15 @@ NS_IMETHODIMP GnomeKeyring::FindLogins(PRUint32 *count,
                                        const nsAString & aHttpRealm,
                                        nsILoginInfo ***logins)
 {
-
-  GList* allFound = NULL;
-
+  AutoFoundList allFound;
   GnomeKeyringResult result = findLogins(aHostname,
                                          aActionURL,
                                          aHttpRealm,
-                                         convertAndCollectLogins,
                                          &allFound);
 
   GK_ENSURE_SUCCESS_BUGGY(result);
 
-  return foundListToArray(loginToLogin, allFound, count, logins);
+  return foundListToArray(foundToLoginInfo, allFound, count, logins);
 }
 
 NS_IMETHODIMP GnomeKeyring::CountLogins(const nsAString & aHostname,
@@ -806,16 +792,15 @@ NS_IMETHODIMP GnomeKeyring::CountLogins(const nsAString & aHostname,
                                         const nsAString & aHttpRealm,
                                         PRUint32 *_retval)
 {
-  int count=0;
+  AutoFoundList allFound;
   GnomeKeyringResult result = findLogins(aHostname,
                                          aActionURL,
                                          aHttpRealm,
-                                         countFoundLogins,
-                                         &count);
+                                         &allFound);
 
   GK_ENSURE_SUCCESS_BUGGY(result);
 
-  *_retval = count;
+  *_retval = g_list_length(allFound);
   return NS_OK;
 }
 
