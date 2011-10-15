@@ -640,7 +640,6 @@ NS_IMETHODIMP GnomeKeyring::ModifyLogin(nsILoginInfo *oldLogin,
   }
 }
 
-
 NS_IMETHODIMP GnomeKeyring::RemoveAllLogins()
 {
   AutoFoundList foundList;
@@ -675,24 +674,10 @@ NS_IMETHODIMP GnomeKeyring::GetAllLogins(PRUint32 *aCount,
   return foundListToArray(foundToLoginInfo, foundList, aCount, aLogins);
 }
 
-NS_IMETHODIMP GnomeKeyring::FindLogins(PRUint32 *count,
-                                       const nsAString & aHostname,
-                                       const nsAString & aActionURL,
-                                       const nsAString & aHttpRealm,
-                                       nsILoginInfo ***logins)
+NS_IMETHODIMP GnomeKeyring::GetAllEncryptedLogins(unsigned int*,
+                                                  nsILoginInfo***)
 {
-
-  GList* allFound = NULL;
-
-  GnomeKeyringResult result = findLogins(aHostname,
-                                         aActionURL,
-                                         aHttpRealm,
-                                         convertAndCollectLogins,
-                                         &allFound);
-
-  GK_ENSURE_SUCCESS_BUGGY(result);
-
-  return foundListToArray(loginToLogin, allFound, count, logins);
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP GnomeKeyring::SearchLogins(PRUint32 *count,
@@ -712,11 +697,7 @@ NS_IMETHODIMP GnomeKeyring::SearchLogins(PRUint32 *count,
   return foundListToArray(foundToLoginInfo, foundList, count, logins);
 
 }
-NS_IMETHODIMP GnomeKeyring::GetAllEncryptedLogins(unsigned int*,
-                                                  nsILoginInfo***)
-{
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
+
 NS_IMETHODIMP GnomeKeyring::GetAllDisabledHosts(PRUint32 *aCount,
                                                 PRUnichar ***aHostnames)
 {
@@ -798,6 +779,26 @@ NS_IMETHODIMP GnomeKeyring::SetLoginSavingEnabled(const nsAString & aHost,
 
   GK_ENSURE_SUCCESS(result);
   return NS_OK;
+}
+
+NS_IMETHODIMP GnomeKeyring::FindLogins(PRUint32 *count,
+                                       const nsAString & aHostname,
+                                       const nsAString & aActionURL,
+                                       const nsAString & aHttpRealm,
+                                       nsILoginInfo ***logins)
+{
+
+  GList* allFound = NULL;
+
+  GnomeKeyringResult result = findLogins(aHostname,
+                                         aActionURL,
+                                         aHttpRealm,
+                                         convertAndCollectLogins,
+                                         &allFound);
+
+  GK_ENSURE_SUCCESS_BUGGY(result);
+
+  return foundListToArray(loginToLogin, allFound, count, logins);
 }
 
 NS_IMETHODIMP GnomeKeyring::CountLogins(const nsAString & aHostname,
