@@ -21,8 +21,8 @@
     <em:targetApplication>
       <Description>
         <em:id>{ec8030f7-c20a-464f-9b0e-13a3a9e97384}</em:id>
-        <em:minVersion>6.0</em:minVersion>
-        <em:maxVersion>6.*</em:maxVersion>
+        <em:minVersion>${XUL_VER_MIN}</em:minVersion>
+        <em:maxVersion>${XUL_VER_MAX}</em:maxVersion>
       </Description>
     </em:targetApplication>
 
