@@ -99,23 +99,27 @@ const char *kDisabledHostMagicAttrValue = "disabledHostMagic" UNIQUE_PROFILE_ID;
 /** attribute names for a disabled hostname entry */
 const char *kDisabledHostAttrName = "disabledHost";
 
-// Macro to check gnome-keyring results
-#define GK_ENSURE_SUCCESS(x)                                  \
+// Utility macros and data structures
+
+// Macro to check result of a gnome-keyring method, and convert it to a
+// mozilla return code. Note that find methods return a NO_MATCH code
+// when no items are returned; if this should not be considered an
+// error, use the CHECKF macro instead.
+#define MGK_GK_CHECK_NS(x)                                    \
   PR_BEGIN_MACRO                                              \
     if (x != GNOME_KEYRING_RESULT_OK) {                       \
-       NS_WARNING("GK_ENSURE_SUCCESS(" #x ") failed");        \
+       NS_WARNING("MGK_GK_CHECK_NS(" #x ") failed");          \
        return NS_ERROR_FAILURE;                               \
     }                                                         \
   PR_END_MACRO
 
-// A bug in gnome-keyring makes it return DENIED in case nothing is found
-// See http://bugzilla.gnome.org/show_bug.cgi?id=447315
-// This is fixed in gnome-keyring trunk
-#define GK_ENSURE_SUCCESS_BUGGY(x)                            \
+// Macro to check result of a gnome-keyring find method, and convert it
+// to a mozilla return code. NO_MATCH is considered to be successful.
+#define MGK_GK_CHECKF_NS(x)                                   \
   PR_BEGIN_MACRO                                              \
     if (x != GNOME_KEYRING_RESULT_OK &&                       \
         x != GNOME_KEYRING_RESULT_NO_MATCH) {                 \
-       NS_WARNING("GK_ENSURE_SUCCESS_BUGGY(" #x ") failed");  \
+       NS_WARNING("MGK_GK_CHECKF_NS(" #x ") failed");         \
        return NS_ERROR_FAILURE;                               \
     }                                                         \
   PR_END_MACRO
@@ -548,7 +552,7 @@ NS_IMETHODIMP GnomeKeyring::AddLogin(nsILoginInfo *aLogin)
                                         TRUE,
                                         &itemId);
   gnome_keyring_attribute_list_free(attributes);
-  GK_ENSURE_SUCCESS(result);
+  MGK_GK_CHECK_NS(result);
 
   return NS_OK;
 }
@@ -640,7 +644,7 @@ NS_IMETHODIMP GnomeKeyring::RemoveAllLogins()
                 kLoginInfoMagicAttrValue,
                 NULL);
 
-  GK_ENSURE_SUCCESS_BUGGY(result);
+  MGK_GK_CHECKF_NS(result);
 
   return deleteFoundItems(foundList);
 }
@@ -658,7 +662,7 @@ NS_IMETHODIMP GnomeKeyring::GetAllLogins(PRUint32 *aCount,
                                 kLoginInfoMagicAttrValue,
                                 NULL);
 
-  GK_ENSURE_SUCCESS_BUGGY(result);
+  MGK_GK_CHECKF_NS(result);
 
   return foundListToArray(foundToLoginInfo, foundList, aCount, aLogins);
 }
@@ -681,7 +685,7 @@ NS_IMETHODIMP GnomeKeyring::SearchLogins(PRUint32 *count,
                                         GNOME_KEYRING_ITEM_GENERIC_SECRET,
                                         attributes,
                                         &foundList );
-  GK_ENSURE_SUCCESS_BUGGY(result);
+  MGK_GK_CHECKF_NS(result);
   gnome_keyring_attribute_list_free(attributes);
   return foundListToArray(foundToLoginInfo, foundList, count, logins);
 
@@ -699,7 +703,7 @@ NS_IMETHODIMP GnomeKeyring::GetAllDisabledHosts(PRUint32 *aCount,
           kDisabledHostMagicAttrValue,
           NULL);
 
-  GK_ENSURE_SUCCESS_BUGGY(result);
+  MGK_GK_CHECKF_NS(result);
 
   return foundListToArray(foundToHost, foundList, aCount, aHostnames);
 }
@@ -718,7 +722,7 @@ NS_IMETHODIMP GnomeKeyring::GetLoginSavingEnabled(const nsAString & aHost,
           NS_ConvertUTF16toUTF8(aHost).get(),
           NULL);
 
-  GK_ENSURE_SUCCESS_BUGGY(result);
+  MGK_GK_CHECKF_NS(result);
 
   *_retval = foundList == NULL;
   return NS_OK;
@@ -741,7 +745,7 @@ NS_IMETHODIMP GnomeKeyring::SetLoginSavingEnabled(const nsAString & aHost,
               NS_ConvertUTF16toUTF8(aHost).get(),
               NULL);
 
-    GK_ENSURE_SUCCESS_BUGGY(result);
+    MGK_GK_CHECKF_NS(result);
     return deleteFoundItems(foundList, PR_TRUE);
   }
 
@@ -766,7 +770,7 @@ NS_IMETHODIMP GnomeKeyring::SetLoginSavingEnabled(const nsAString & aHost,
             &itemId);
   gnome_keyring_attribute_list_free (attributes);
 
-  GK_ENSURE_SUCCESS(result);
+  MGK_GK_CHECK_NS(result);
   return NS_OK;
 }
 
@@ -782,7 +786,7 @@ NS_IMETHODIMP GnomeKeyring::FindLogins(PRUint32 *count,
                                          aHttpRealm,
                                          &allFound);
 
-  GK_ENSURE_SUCCESS_BUGGY(result);
+  MGK_GK_CHECKF_NS(result);
 
   return foundListToArray(foundToLoginInfo, allFound, count, logins);
 }
@@ -798,7 +802,7 @@ NS_IMETHODIMP GnomeKeyring::CountLogins(const nsAString & aHostname,
                                          aHttpRealm,
                                          &allFound);
 
-  GK_ENSURE_SUCCESS_BUGGY(result);
+  MGK_GK_CHECKF_NS(result);
 
   *_retval = g_list_length(allFound);
   return NS_OK;
