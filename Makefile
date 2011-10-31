@@ -1,8 +1,8 @@
-XUL_PKG_NAME     := $(shell pkg-config --list-all | grep -oP '^libxul[0-9]*\s')
+XUL_PKG_NAME     := $(shell (pkg-config --atleast-version=2.0 libxul && echo libxul) || (pkg-config libxul2 && echo libxul2))
 XULRUNNER        := $(shell find -L $$(dirname $$(pkg-config --libs-only-L $(XUL_PKG_NAME) | tail -c+3)) -name xulrunner)
 # versions to set if "xulrunner" tool is not available
-XUL_VER_MIN      := 6.0.1
-XUL_VER_MAX      := 6.*
+XUL_VER_MIN      ?= 6.0.1
+XUL_VER_MAX      ?= 6.*
 
 # compilation flags
 XUL_CFLAGS       := `pkg-config --cflags $(XUL_PKG_NAME) gnome-keyring-1` -DMOZ_NO_MOZALLOC
