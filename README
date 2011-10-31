@@ -1,37 +1,41 @@
 An extension to enable passwords and form logins to be stored in gnome-keyring
 
 This extension replaces the default password manager in both Firefox and
-Thunderbird with an implementation which stores the passwords in Gnome keyring.
+Thunderbird with an implementation which stores the passwords in Gnome Keyring
+(i.e. seahorse).
 
 This allows for safe storage of passwords without prompting for password after
-Firefox or Thunderbird has been started.
+Firefox or Thunderbird has been started. You can also backup your passwords
+easily, without having to backup up all of the rest of your profile -
+gnome-keyring stores its data in ~/.gnome2/keyrings
 
 Notice: gnome-keyring stores the passwords encrypted on permanent storage but
 it keeps passwords in memory without encryption. As a result, other programs
 with access to memory space of gnome-keyring (namely debuggers and applications
 running as root) may be able to extract the passwords. The same applies to
 internal Firefox and Thunderbird implementations so use of this extension
-should be any less secure than the default implementation. The passwords are
-decrypted once the gnome keyring has been opened (if a gnome keyring has
-identical password to your login password, it will be automatically opened once
-you login). Your passwords are stored only in encrypted form any time you are
-not logged in.
+should not be any less secure than the default implementation. The passwords are
+decrypted once the keyring has been opened (the keyring called "login" will be
+automatically opened once you login, if its password is identical to your login
+password). Your passwords are stored only in encrypted form when you are not
+logged in, or when you explicitly re-lock the keyring via the seahorse UI.
 
 some basic infos about the extension:
 
-there’s no migration facility atm, if you move from ff integrated
-password manager to gnome keyring you’ll need to save all the passwords
-again. saved password in ff remain untouched, so remember to delete
-them when the add-on is inactive if you’re decided to move. if you
-set a master password, when you click on preferences→security→saved
-passwords→ show passwords you still get asked for it, even if gnome
-keyring is active. you can change the keyring in which passwords are saved
-by creating the preference item extensions.gnome-keyring.keyringName. The
-default is mozilla. Note that password will be retrieved from every
-unlocked keyring because the gnome-keyring API doens’t provide a way
-to search in just one keyring. You’ll find some more infos on bugzilla
-(https://bugzilla.mozilla.org/show_bug.cgi?id=309807)
+there’s no migration facility atm, if you move from ff integrated password
+manager to gnome keyring you’ll need to save all the passwords again. this is
+less of a problem in firefox 7+ whose password manager lets you right-click and
+do "copy password".
 
+saved password in ff remain untouched, so remember to delete them when the
+add-on is inactive if you decided to move. if you set a master password, when
+you click on preferences→security→saved passwords→ show passwords you still get
+asked for it, even if gnome keyring is active. you can change the keyring in
+which passwords are saved by creating/editing the preference item
+extensions.gnome-keyring.keyringName. The default is "mozilla".
+
+You can find more technical information on bugzilla
+(https://bugzilla.mozilla.org/show_bug.cgi?id=309807)
 
 
 Build dependencies:
@@ -44,12 +48,13 @@ Tested on:
  - Ubuntu 10.10 with Firefox 3.6.12 and Thunderbird 3.1.6 (see bugs)
  - Arch Linux
  - Gentoo Linux with Firefox 3.6.12 and Thunderbird 3.1.6
+ - Debian wheezy/sid with Iceweasel 7.0.1
 
 
 Known Bugs:
 - Problems on Ubuntu 8.10 installation with Thundebird 3.1.6:
     It is necessary to copy libxul.so and libxpcom.so from
-    /usr/lib/xulrunner-*/ into /usr/lib/tunderbird-*/ folder. See issue #4.
+    /usr/lib/xulrunner-*/ into /usr/lib/thunderbird-*/ folder. See issue #4.
     I'am thankful for any hints why this Problem exists. And status
     on different distributions (no problem on gentoo).
 

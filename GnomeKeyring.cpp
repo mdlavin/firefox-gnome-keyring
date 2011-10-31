@@ -124,6 +124,14 @@ const char *kDisabledHostAttrName = "disabledHost";
     }                                                         \
   PR_END_MACRO
 
+#define MGK_GK_CHECK(x, bail)                                 \
+  PR_BEGIN_MACRO                                              \
+    if (x != GNOME_KEYRING_RESULT_OK) {                       \
+       NS_WARNING("MGK_GK_CHECK(" #x ") failed");             \
+       goto bail;                                             \
+    }                                                         \
+  PR_END_MACRO
+
 #define GKATTR_ADD(attr, name, value)                         \
   {                                                           \
     gnome_keyring_attribute_list_append_string(               \
@@ -200,6 +208,54 @@ typedef AutoPtr<GList, g_list_free> AutoIdList;
 
 // Utilities
 
+/**
+ * Filter out items based on a user-supplied function and data. Code
+ * adapted from GLib's g_list_remove_all.
+ *
+ * @filter: gpointer -> bool. false to remove from the array. should
+ *          also free the memory used by the data, if appropriate.
+ */
+GList*
+_g_list_remove_all_custom(GList* list,
+                          gboolean (*filter)(gconstpointer, gpointer),
+                          gconstpointer user_data)
+{
+  GList *tmp = list;
+
+  while (tmp)
+    {
+      if (filter(user_data, tmp->data))
+      tmp = tmp->next;
+      else
+      {
+        GList *next = tmp->next;
+
+        if (tmp->prev)
+          tmp->prev->next = next;
+        else
+          list = next;
+        if (next)
+          next->prev = tmp->prev;
+
+          g_slice_free(GList, tmp);
+        tmp = next;
+      }
+    }
+  return list;
+}
+
+gboolean
+matchKeyring(gconstpointer user_data, gpointer data)
+{
+  GnomeKeyringFound* found = static_cast<GnomeKeyringFound*>(data);
+  const char* keyring = static_cast<const char*>(user_data);
+  gboolean keep = !strcmp(found->keyring, keyring);
+  if (!keep) {
+    gnome_keyring_found_free(found);
+  }
+  return keep;
+}
+
 void
 GnomeKeyring::buildAttributeList(nsILoginInfo *aLogin,
                                  GnomeKeyringAttributeList** attributes)
@@ -272,22 +328,93 @@ GnomeKeyring::deleteFoundItems(GList* foundList,
     return NS_OK;
   }
 
-  PRUint32 i = 0;
-  for (GList* l = foundList; l != NULL; l = l->next, i++)
+  PRBool deleted = PR_FALSE;
+  for (GList* l = foundList; l != NULL; l = l->next, deleted = PR_TRUE)
   {
+    if (aExpectOnlyOne && deleted)
+      NS_WARNING("Expected only one item to delete, but found more");
+
     GnomeKeyringFound* found = static_cast<GnomeKeyringFound*>(l->data);
     GK_LOG(("Found item with id %i\n", found->item_id));
 
-    GnomeKeyringResult result = gnome_keyring_item_delete_sync(keyringName.get(),
+    GnomeKeyringResult result = gnome_keyring_item_delete_sync(found->keyring,
                                                                found->item_id);
-    if (result != GNOME_KEYRING_RESULT_OK) {
-      return NS_ERROR_FAILURE;
-    }
-
-    if (i == 1 && aExpectOnlyOne)
-      NS_WARNING("Expected only one item to delete, but found more");
+    MGK_GK_CHECK_NS(result);
   }
   return NS_OK;
+}
+
+GnomeKeyringResult
+GnomeKeyring::findItems(GnomeKeyringItemType type,
+                        GnomeKeyringAttributeList* attributes,
+                        GList** found)
+{
+  GnomeKeyringResult result;
+  result = gnome_keyring_find_items_sync(type, attributes, found);
+
+  MGK_GK_CHECK(result, bail1);
+  *found = _g_list_remove_all_custom(*found, matchKeyring, keyringName.get());
+  bail1:
+  return result;
+}
+
+GnomeKeyringResult
+GnomeKeyring::findLoginItems(GnomeKeyringAttributeList* attributes,
+                             GList** found)
+{
+  return findItems(GNOME_KEYRING_ITEM_GENERIC_SECRET, attributes, found);
+}
+
+GnomeKeyringResult
+GnomeKeyring::findLogins(const nsAString & aHostname,
+                         const nsAString & aActionURL,
+                         const nsAString & aHttpRealm,
+                         GList** found)
+{
+  AutoAttributeList attributes;
+  GKATTR_NEW_LI(attributes);
+
+  GKATTR_ADD(attributes, kHostnameAttr, aHostname);
+  if (!aActionURL.IsVoid() && !aActionURL.IsEmpty()) {
+    GKATTR_ADD(attributes, kFormSubmitURLAttr, aActionURL);
+  }
+  if (!aHttpRealm.IsVoid() && !aHttpRealm.IsEmpty()) {
+    GKATTR_ADD(attributes, kHttpRealmAttr, aHttpRealm);
+  }
+
+  GnomeKeyringResult result = findLoginItems(attributes, found);
+
+  if (aActionURL.IsVoid()) {
+    // TODO: filter out items with a kFormSubmitURLAttr
+    // practically, this is not necessary since actionURL/httpRealm are
+    // mutually exclusive, but this is not enforced by the interface
+  }
+  if (aHttpRealm.IsVoid()) {
+    // TODO: filter out items with a kHttpRealmAttr
+    // practically, this is not necessary since actionURL/httpRealm are
+    // mutually exclusive, but this is not enforced by the interface
+  }
+
+  return result;
+}
+
+GnomeKeyringResult
+GnomeKeyring::findHostItemsAll(GList** found)
+{
+  AutoAttributeList attributes;
+  GKATTR_NEW_DH(attributes);
+  return findItems(GNOME_KEYRING_ITEM_NOTE, attributes, found);
+}
+
+GnomeKeyringResult
+GnomeKeyring::findHostItems(const nsAString & aHost,
+                            GList** found)
+{
+  AutoAttributeList attributes;
+  GKATTR_NEW_DH(attributes);
+  GKATTR_ADD(attributes, kDisabledHostAttrName, aHost);
+  // TODO: expect only one
+  return findItems(GNOME_KEYRING_ITEM_NOTE, attributes, found);
 }
 
 nsILoginInfo*
@@ -360,7 +487,7 @@ foundToHost(GnomeKeyringFound* found)
 
 template<class T>
 nsresult
-foundListToArray(T (*aFoundToObject)(GnomeKeyringFound* found),
+foundListToArray(T (*aFoundToObject)(GnomeKeyringFound*),
                  GList* aFoundList, PRUint32 *aCount, T **aArray)
 {
   PRUint32 count = 0;
@@ -389,83 +516,6 @@ foundListToArray(T (*aFoundToObject)(GnomeKeyringFound* found),
   *aCount = count;
   *aArray = array;
   return NS_OK;
-}
-
-void
-checkAttribute(const char* valuePattern, const char* value, bool* isMatch)
-{
-  if (valuePattern == NULL) {
-    *isMatch = FALSE;
-  } else {
-    // If the valuePattern is "" then it should match
-    // with everything
-    if (!strcmp("", valuePattern)) {
-      return;
-    }
-
-    if (strcmp(valuePattern, value)) {
-      *isMatch = FALSE;
-    }
-  }
-}
-
-GnomeKeyringResult
-findLogins(const nsAString & aHostname,
-           const nsAString & aActionURL,
-           const nsAString & aHttpRealm,
-           GList **aFoundList)
-{
-  *aFoundList = NULL;
-
-  AutoAttributeList attributes;
-  GKATTR_NEW_LI(attributes);
-
-  /* Convert to UTF-8 (but keep a reference to the NS_ConvertUTF16ToUTF8
-   * instance around, so the string .get() returns won't be free'd */
-  GKATTR_ADD(attributes, kHostnameAttr, aHostname);
-
-  GList* unfiltered;
-  GnomeKeyringResult result = gnome_keyring_find_items_sync(
-                                        GNOME_KEYRING_ITEM_GENERIC_SECRET,
-                                        attributes,
-                                        &unfiltered );
-
-  /* Convert to UTF-8 (but keep a reference to the NS_ConvertUTF16ToUTF8
-   * instance around, so the string .get() returns won't be free'd */
-  const NS_ConvertUTF16toUTF8 utf8ActionURL(aActionURL);
-  const char* tempActionUrl = utf8ActionURL.IsVoid() ? NULL : utf8ActionURL.get();
-  const NS_ConvertUTF16toUTF8 utf8HttpRealm(aHttpRealm);
-  const char* tempHttpRealm = utf8HttpRealm.IsVoid() ? NULL : utf8HttpRealm.get();
-
-  for (GList* l = unfiltered; l != NULL; l = l->next) {
-    bool isMatch = TRUE;
-    GnomeKeyringFound* found = static_cast<GnomeKeyringFound*>(l->data);
-
-    GnomeKeyringAttribute *attrArray = (GnomeKeyringAttribute *)found->attributes->data;
-
-    for (PRUint32 i = 0; i < found->attributes->len; i++) {
-      if (attrArray[i].type != GNOME_KEYRING_ATTRIBUTE_TYPE_STRING)
-        continue;
-
-      const char *attrName = attrArray[i].name;
-      const char *attrValue = attrArray[i].value.string;
-
-      if (!strcmp(attrName, kFormSubmitURLAttr)) {
-        checkAttribute(tempActionUrl, attrValue, &isMatch);
-      } else if (!strcmp(attrName, kHttpRealmAttr)) {
-        checkAttribute(tempHttpRealm, attrValue, &isMatch);
-      }
-    }
-
-    if (isMatch) {
-      *aFoundList = g_list_append(*aFoundList, found);
-    } else {
-      gnome_keyring_found_free(found);
-    }
-  }
-  g_list_free(unfiltered);
-
-  return result;
 }
 
 /* Implementation file */
@@ -530,9 +580,9 @@ NS_IMETHODIMP GnomeKeyring::Init()
   /* Create the password keyring, it doesn't hurt if it already exists */
   GnomeKeyringResult result = gnome_keyring_create_sync(keyringName.get(), NULL);
   if ((result != GNOME_KEYRING_RESULT_OK) &&
-     (result != GNOME_KEYRING_RESULT_KEYRING_ALREADY_EXISTS)) {
-    ret = NS_ERROR_FAILURE;
+      (result != GNOME_KEYRING_RESULT_KEYRING_ALREADY_EXISTS)) {
     NS_ERROR("Can't open or create password keyring!");
+    return NS_ERROR_FAILURE;
   }
   return ret;
 }
@@ -570,14 +620,10 @@ NS_IMETHODIMP GnomeKeyring::RemoveLogin(nsILoginInfo *aLogin)
 {
   AutoAttributeList attributes;
   buildAttributeList(aLogin, &attributes);
+
   AutoFoundList foundList;
-
-  GnomeKeyringResult result = gnome_keyring_find_items_sync(
-                                GNOME_KEYRING_ITEM_GENERIC_SECRET,
-                                attributes, &foundList);
-
-  if (result != GNOME_KEYRING_RESULT_OK)
-    return NS_ERROR_FAILURE;
+  GnomeKeyringResult result = findLoginItems(attributes, &foundList);
+  MGK_GK_CHECK_NS(result);
 
   return deleteFoundItems(foundList, PR_TRUE);
 }
@@ -585,74 +631,63 @@ NS_IMETHODIMP GnomeKeyring::RemoveLogin(nsILoginInfo *aLogin)
 NS_IMETHODIMP GnomeKeyring::ModifyLogin(nsILoginInfo *oldLogin,
                                         nsISupports *modLogin)
 {
+  nsresult interfaceok;
+
   /* If the second argument is an nsILoginInfo,
    * just remove the old login and add the new one */
-
-  nsresult interfaceok;
   nsCOMPtr<nsILoginInfo> newLogin( do_QueryInterface(modLogin, &interfaceok) );
   if (interfaceok == NS_OK) {
     nsresult rv = RemoveLogin(oldLogin);
     rv |= AddLogin(newLogin);
-  return rv;
-  } /* Otherwise, it has to be an nsIPropertyBag.
-     * Let's get the attributes from the old login, then append the ones
-     * fetched from the property bag. Gracefully, if an attribute appears
-     * twice in an attribut list, the last value is stored. */
-    else {
-    nsCOMPtr<nsIPropertyBag> matchData( do_QueryInterface(modLogin, &interfaceok) );
-    if (interfaceok == NS_OK) {
-      AutoAttributeList attributes;
-      buildAttributeList(oldLogin, &attributes);
-      AutoFoundList foundList;
+    return rv;
+  }
 
-      GnomeKeyringResult result = gnome_keyring_find_items_sync(
-                                  GNOME_KEYRING_ITEM_GENERIC_SECRET,
-                                  attributes, &foundList);
+  /* Otherwise, it has to be an nsIPropertyBag.
+   * Let's get the attributes from the old login, then append the ones
+   * fetched from the property bag. Gracefully, if an attribute appears
+   * twice in an attribut list, the last value is stored. */
+  nsCOMPtr<nsIPropertyBag> matchData( do_QueryInterface(modLogin, &interfaceok) );
+  if (interfaceok != NS_OK) {
+    return interfaceok;
+  }
 
-      if (result != GNOME_KEYRING_RESULT_OK) {
-          return NS_ERROR_FAILURE;
-      }
+  AutoAttributeList attributes;
+  buildAttributeList(oldLogin, &attributes);
 
-      if (foundList == NULL) {
-        return NS_ERROR_FAILURE;
-      }
+  AutoFoundList foundList;
+  GnomeKeyringResult result = findLoginItems(attributes, &foundList);
+  MGK_GK_CHECK_NS(result);
+  if (foundList == NULL) {
+    return NS_ERROR_FAILURE;
+  }
 
-      appendAttributesFromBag(static_cast<nsIPropertyBag*>(matchData), &attributes);
-
-      // We need the id of the keyring item to set its attributes.
-
-      PRUint32 i = 0, id;
-      for (GList* l = foundList; l != NULL; l = l->next, i++)
-      {
-        GnomeKeyringFound* found = static_cast<GnomeKeyringFound*>(l->data);
-        id = found->item_id;
-        if (i >= 1){
-          return NS_ERROR_FAILURE;
-        }
-      }
-      result = gnome_keyring_item_set_attributes_sync(keyringName.get(),
-                                                      id,
-                                                      attributes);
-      if (result != GNOME_KEYRING_RESULT_OK) {
-        return NS_ERROR_FAILURE; }
-      return NS_OK;
-    } else {
-        return interfaceok;
+  appendAttributesFromBag(static_cast<nsIPropertyBag*>(matchData), &attributes);
+  // We need the id of the keyring item to set its attributes.
+  PRUint32 i = 0, id;
+  for (GList* l = foundList; l != NULL; l = l->next, i++)
+  {
+    GnomeKeyringFound* found = static_cast<GnomeKeyringFound*>(l->data);
+    id = found->item_id;
+    if (i >= 1) {
+      NS_ERROR("found more than one item to edit");
+      return NS_ERROR_FAILURE;
     }
   }
+  result = gnome_keyring_item_set_attributes_sync(keyringName.get(),
+                                                  id,
+                                                  attributes);
+  MGK_GK_CHECK_NS(result);
+
+  return NS_OK;
 }
 
 NS_IMETHODIMP GnomeKeyring::RemoveAllLogins()
 {
+  AutoAttributeList attributes;
+  GKATTR_NEW_LI(attributes);
+
   AutoFoundList foundList;
-
-  GnomeKeyringResult result = gnome_keyring_find_itemsv_sync(
-                GNOME_KEYRING_ITEM_GENERIC_SECRET,
-                &foundList,
-                kLoginInfoMagicAttrName, GNOME_KEYRING_ATTRIBUTE_TYPE_STRING,
-                kLoginInfoMagicAttrValue,
-                NULL);
-
+  GnomeKeyringResult result = findLoginItems(attributes, &foundList);
   MGK_GK_CHECKF_NS(result);
 
   return deleteFoundItems(foundList);
@@ -661,16 +696,11 @@ NS_IMETHODIMP GnomeKeyring::RemoveAllLogins()
 NS_IMETHODIMP GnomeKeyring::GetAllLogins(PRUint32 *aCount,
                                          nsILoginInfo ***aLogins)
 {
+  AutoAttributeList attributes;
+  GKATTR_NEW_LI(attributes);
+
   AutoFoundList foundList;
-
-  GnomeKeyringResult result = gnome_keyring_find_itemsv_sync(
-                                GNOME_KEYRING_ITEM_GENERIC_SECRET,
-                                &foundList,
-                                kLoginInfoMagicAttrName,
-                                GNOME_KEYRING_ATTRIBUTE_TYPE_STRING,
-                                kLoginInfoMagicAttrValue,
-                                NULL);
-
+  GnomeKeyringResult result = findLoginItems(attributes, &foundList);
   MGK_GK_CHECKF_NS(result);
 
   return foundListToArray(foundToLoginInfo, foundList, aCount, aLogins);
@@ -686,32 +716,22 @@ NS_IMETHODIMP GnomeKeyring::SearchLogins(PRUint32 *count,
                                          nsIPropertyBag *matchData,
                                          nsILoginInfo ***logins)
 {
-  AutoFoundList foundList;
   AutoAttributeList attributes;
   GKATTR_NEW_LI(attributes);
   appendAttributesFromBag(matchData, &attributes);
 
-  GnomeKeyringResult result = gnome_keyring_find_items_sync(
-                                        GNOME_KEYRING_ITEM_GENERIC_SECRET,
-                                        attributes,
-                                        &foundList );
+  AutoFoundList foundList;
+  GnomeKeyringResult result = findLoginItems(attributes, &foundList);
   MGK_GK_CHECKF_NS(result);
-  return foundListToArray(foundToLoginInfo, foundList, count, logins);
 
+  return foundListToArray(foundToLoginInfo, foundList, count, logins);
 }
 
 NS_IMETHODIMP GnomeKeyring::GetAllDisabledHosts(PRUint32 *aCount,
                                                 PRUnichar ***aHostnames)
 {
   AutoFoundList foundList;
-
-  GnomeKeyringResult result = gnome_keyring_find_itemsv_sync(
-          GNOME_KEYRING_ITEM_NOTE,
-          &foundList,
-          kDisabledHostMagicAttrName, GNOME_KEYRING_ATTRIBUTE_TYPE_STRING,
-          kDisabledHostMagicAttrValue,
-          NULL);
-
+  GnomeKeyringResult result = findHostItemsAll(&foundList);
   MGK_GK_CHECKF_NS(result);
 
   return foundListToArray(foundToHost, foundList, aCount, aHostnames);
@@ -721,16 +741,7 @@ NS_IMETHODIMP GnomeKeyring::GetLoginSavingEnabled(const nsAString & aHost,
                                                   PRBool *_retval)
 {
   AutoFoundList foundList;
-
-  GnomeKeyringResult result = gnome_keyring_find_itemsv_sync(
-          GNOME_KEYRING_ITEM_NOTE,
-          &foundList,
-          kDisabledHostMagicAttrName, GNOME_KEYRING_ATTRIBUTE_TYPE_STRING,
-          kDisabledHostMagicAttrValue,
-          kDisabledHostAttrName, GNOME_KEYRING_ATTRIBUTE_TYPE_STRING,
-          NS_ConvertUTF16toUTF8(aHost).get(),
-          NULL);
-
+  GnomeKeyringResult result = findHostItems(aHost, &foundList);
   MGK_GK_CHECKF_NS(result);
 
   *_retval = foundList == NULL;
@@ -744,17 +755,9 @@ NS_IMETHODIMP GnomeKeyring::SetLoginSavingEnabled(const nsAString & aHost,
 
   if (isEnabled) {
     AutoFoundList foundList;
-
-    result = gnome_keyring_find_itemsv_sync(
-              GNOME_KEYRING_ITEM_NOTE,
-              &foundList,
-              kDisabledHostMagicAttrName, GNOME_KEYRING_ATTRIBUTE_TYPE_STRING,
-              kDisabledHostMagicAttrValue,
-              kDisabledHostAttrName, GNOME_KEYRING_ATTRIBUTE_TYPE_STRING,
-              NS_ConvertUTF16toUTF8(aHost).get(),
-              NULL);
-
+    result = findHostItems(aHost, &foundList);
     MGK_GK_CHECKF_NS(result);
+
     return deleteFoundItems(foundList, PR_TRUE);
   }
 

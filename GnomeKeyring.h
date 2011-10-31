@@ -55,13 +55,40 @@ extern PRLogModuleInfo *gGnomeKeyringLog;
 class GnomeKeyring : public nsILoginManagerStorage
 {
 private:
-  void buildAttributeList(nsILoginInfo *aLogin,
+  void
+  buildAttributeList(nsILoginInfo *aLogin,
+                     GnomeKeyringAttributeList **attributes);
+
+  void
+  appendAttributesFromBag(nsIPropertyBag *matchData,
                           GnomeKeyringAttributeList **attributes);
-  void appendAttributesFromBag(nsIPropertyBag *matchData,
-                               GnomeKeyringAttributeList **attributes);
-  nsresult deleteFoundItems(GList* foundList,
-                                 PRBool);
-  
+
+  nsresult
+  deleteFoundItems(GList* foundList,
+                   PRBool);
+
+  GnomeKeyringResult
+  findItems(GnomeKeyringItemType type,
+            GnomeKeyringAttributeList* attributes,
+            GList** found);
+
+  GnomeKeyringResult
+  findLoginItems(GnomeKeyringAttributeList* attributes,
+                 GList** found);
+
+  GnomeKeyringResult
+  findLogins(const nsAString &aHostname,
+             const nsAString &aActionURL,
+             const nsAString &aHttpRealm,
+             GList** found);
+
+  GnomeKeyringResult
+  findHostItems(const nsAString &aHost,
+                GList** found);
+
+  GnomeKeyringResult
+  findHostItemsAll(GList** found);
+
 public:
   NS_DECL_ISUPPORTS
   NS_DECL_NSILOGINMANAGERSTORAGE
