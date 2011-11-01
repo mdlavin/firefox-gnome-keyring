@@ -1,4 +1,4 @@
-XUL_PKG_NAME     := $(shell (pkg-config --atleast-version=2.0 libxul && echo libxul) || (pkg-config libxul2 && echo libxul2))
+XUL_PKG_NAME     := $(shell (pkg-config --atleast-version=2 libxul && echo libxul) || (pkg-config libxul2 && echo libxul2))
 XULRUNNER        := $(shell find -L $$(dirname $$(pkg-config --libs-only-L $(XUL_PKG_NAME) | tail -c+3)) -name xulrunner)
 # versions to set if "xulrunner" tool is not available
 XUL_VER_MIN      ?= 6.0.1
