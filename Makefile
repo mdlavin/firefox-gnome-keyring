@@ -15,7 +15,7 @@ ARCH             := $(shell uname -m)
 ARCH             := $(shell echo ${ARCH} | sed 's/i686/x86/')
 PLATFORM         := $(shell uname)_$(ARCH)-gcc3
 
-VERSION          := $(shell git describe --tags || date +dev-%s)
+VERSION          := $(shell git describe --tags 2>/dev/null || date +dev-%s)
 TARGET           := libgnomekeyring.so
 XPI_TARGET       := gnome-keyring_password_integration-$(VERSION).xpi
 
@@ -33,7 +33,7 @@ build: build-xpi
 build-xpi: $(XPI_TARGET)
 
 $(XPI_TARGET): $(BUILD_FILES)
-	cd xpi && zip -r ../$@ *
+	cd xpi && zip -rq ../$@ *
 
 xpi/platform/$(PLATFORM)/components/$(TARGET): $(TARGET)
 	mkdir -p xpi/platform/$(PLATFORM)/components
