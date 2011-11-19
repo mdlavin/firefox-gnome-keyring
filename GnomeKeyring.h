@@ -63,6 +63,10 @@ private:
   appendAttributesFromBag(nsIPropertyBag *matchData,
                           GnomeKeyringAttributeList **attributes);
 
+  void
+  appendItemInfoFromBag(nsIPropertyBag *matchData,
+                        GnomeKeyringItemInfo **itemInfo);
+
   nsresult
   deleteFoundItems(GList* foundList,
                    PRBool);

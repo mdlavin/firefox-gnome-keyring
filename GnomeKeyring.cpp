@@ -202,6 +202,10 @@ typedef AutoPtr<GList, gnome_keyring_found_list_free> AutoFoundList;
  */
 typedef AutoPtr<GArray, gnome_keyring_attribute_list_free> AutoAttributeList;
 /**
+ * Deep free of GnomeKeyringItemInfo
+ */
+typedef AutoPtr<GnomeKeyringItemInfo, gnome_keyring_item_info_free> AutoItemInfo;
+/**
  * Shallow free of a GList.
  */
 typedef AutoPtr<GList, g_list_free> AutoIdList;
@@ -277,7 +281,7 @@ void
 GnomeKeyring::appendAttributesFromBag(nsIPropertyBag *matchData,
                                       GnomeKeyringAttributeList** attributes)
 {
-  nsAutoString s, property, propName;
+  nsAutoString s, property;
   nsCOMPtr<nsIVariant> propValue;
   nsresult result;
 
@@ -316,6 +320,23 @@ GnomeKeyring::appendAttributesFromBag(nsIPropertyBag *matchData,
   result = matchData->GetProperty(property, getter_AddRefs(propValue));
   if ( result != NS_ERROR_FAILURE ) {
     GKATTR_CP0(*attributes, propValue->GetAsAString, kHttpRealmAttr, s);
+  }
+}
+
+void
+GnomeKeyring::appendItemInfoFromBag(nsIPropertyBag *matchData,
+                                    GnomeKeyringItemInfo** itemInfo)
+{
+  nsAutoString s, property;
+  nsCOMPtr<nsIVariant> propValue;
+  nsresult result;
+
+  property.AssignLiteral(kPasswordAttr);
+  result = matchData->GetProperty(property, getter_AddRefs(propValue));
+  if ( result != NS_ERROR_FAILURE ) {
+    propValue->GetAsAString(s);
+    gnome_keyring_item_info_set_secret(*itemInfo,
+                                       NS_ConvertUTF16toUTF8(s).get());
   }
 }
 
@@ -651,18 +672,15 @@ NS_IMETHODIMP GnomeKeyring::ModifyLogin(nsILoginInfo *oldLogin,
     return interfaceok;
   }
 
+  GnomeKeyringResult result;
+
   AutoAttributeList attributes;
   buildAttributeList(oldLogin, &attributes);
 
-  AutoFoundList foundList;
-  GnomeKeyringResult result = findLoginItems(attributes, &foundList);
-  MGK_GK_CHECK_NS(result);
-  if (foundList == NULL) {
-    return NS_ERROR_FAILURE;
-  }
-
-  appendAttributesFromBag(static_cast<nsIPropertyBag*>(matchData), &attributes);
   // We need the id of the keyring item to set its attributes.
+  AutoFoundList foundList;
+  result = findLoginItems(attributes, &foundList);
+  MGK_GK_CHECK_NS(result);
   PRUint32 i = 0, id;
   for (GList* l = foundList; l != NULL; l = l->next, i++)
   {
@@ -673,9 +691,24 @@ NS_IMETHODIMP GnomeKeyring::ModifyLogin(nsILoginInfo *oldLogin,
       return NS_ERROR_FAILURE;
     }
   }
+
+  // set new attributes
+  appendAttributesFromBag(matchData.get(), &attributes);
   result = gnome_keyring_item_set_attributes_sync(keyringName.get(),
                                                   id,
                                                   attributes);
+  MGK_GK_CHECK_NS(result);
+
+  // set new iteminfo, e.g. password
+  AutoItemInfo itemInfo;
+  result = gnome_keyring_item_get_info_sync(keyringName.get(),
+                                            id,
+                                            &itemInfo);
+  MGK_GK_CHECK_NS(result);
+  appendItemInfoFromBag(matchData.get(), &itemInfo);
+  result = gnome_keyring_item_set_info_sync(keyringName.get(),
+                                            id,
+                                            itemInfo);
   MGK_GK_CHECK_NS(result);
 
   return NS_OK;
