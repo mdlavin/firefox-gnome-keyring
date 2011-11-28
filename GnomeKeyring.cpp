@@ -311,18 +311,17 @@ newDisabledHostsAttributes(GnomeKeyringAttributeList** attributes)
 }
 
 void
-buildAttributeList(nsILoginInfo *aLogin,
-                   GnomeKeyringAttributeList** attrList)
+appendAttributesFromLogin(nsILoginInfo *aLogin,
+                          GnomeKeyringAttributeList* attrList)
 {
   typedef nsILoginInfo L;
-  newLoginInfoAttributes(attrList);
-  copyAttribute(*attrList, aLogin, &L::GetHostname, kHostnameAttr);
-  copyAttribute(*attrList, aLogin, &L::GetUsername, kUsernameAttr);
-  copyAttribute(*attrList, aLogin, &L::GetUsernameField, kUsernameFieldAttr);
-  copyAttribute(*attrList, aLogin, &L::GetPasswordField, kPasswordFieldAttr);
+  copyAttribute(attrList, aLogin, &L::GetHostname, kHostnameAttr);
+  copyAttribute(attrList, aLogin, &L::GetUsername, kUsernameAttr);
+  copyAttribute(attrList, aLogin, &L::GetUsernameField, kUsernameFieldAttr);
+  copyAttribute(attrList, aLogin, &L::GetPasswordField, kPasswordFieldAttr);
   // formSubmitURL and httpRealm are not guaranteed to be set.
-  copyAttributeOr(*attrList, aLogin, &L::GetFormSubmitURL, kFormSubmitURLAttr);
-  copyAttributeOr(*attrList, aLogin, &L::GetHttpRealm, kHttpRealmAttr);
+  copyAttributeOr(attrList, aLogin, &L::GetFormSubmitURL, kFormSubmitURLAttr);
+  copyAttributeOr(attrList, aLogin, &L::GetHttpRealm, kHttpRealmAttr);
 }
 
 /** attributes must already have loginInfo magic set */
@@ -624,7 +623,8 @@ NS_IMETHODIMP GnomeKeyring::InitWithFile(nsIFile *aInputFile,
 NS_IMETHODIMP GnomeKeyring::AddLogin(nsILoginInfo *aLogin)
 {
   AutoAttributeList attributes;
-  buildAttributeList(aLogin, &attributes);
+  newLoginInfoAttributes(&attributes);
+  appendAttributesFromLogin(aLogin, attributes);
 
   nsAutoString password, hostname;
   aLogin->GetPassword(password);
@@ -646,7 +646,8 @@ NS_IMETHODIMP GnomeKeyring::AddLogin(nsILoginInfo *aLogin)
 NS_IMETHODIMP GnomeKeyring::RemoveLogin(nsILoginInfo *aLogin)
 {
   AutoAttributeList attributes;
-  buildAttributeList(aLogin, &attributes);
+  newLoginInfoAttributes(&attributes);
+  appendAttributesFromLogin(aLogin, attributes);
 
   AutoFoundList foundList;
   GnomeKeyringResult result = findLoginItems(attributes, &foundList);
@@ -681,7 +682,8 @@ NS_IMETHODIMP GnomeKeyring::ModifyLogin(nsILoginInfo *oldLogin,
   GnomeKeyringResult result;
 
   AutoAttributeList attributes;
-  buildAttributeList(oldLogin, &attributes);
+  newLoginInfoAttributes(&attributes);
+  appendAttributesFromLogin(oldLogin, attributes);
 
   // We need the id of the keyring item to set its attributes.
   AutoFoundList foundList;
