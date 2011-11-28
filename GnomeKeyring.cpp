@@ -72,32 +72,32 @@ PRLogModuleInfo *gGnomeKeyringLog;
  */
 nsCString keyringName;
 
-const char *kPrefsBranch = "extensions.gnome-keyring.";
-const char *kPrefsKeyring = "keyringName";
-const char *kDefaultKeyring = "mozilla";
+static const char *kPrefsBranch = "extensions.gnome-keyring.";
+static const char *kPrefsKeyring = "keyringName";
+static const char *kDefaultKeyring = "mozilla";
 
 // TODO should use profile identifier instead of a constant
 #define UNIQUE_PROFILE_ID "v1"
 
 /** magic signature that a keyring item represents login information */
-const char *kLoginInfoMagicAttrName = "mozLoginInfoMagic";
-const char *kLoginInfoMagicAttrValue = "loginInfoMagic" UNIQUE_PROFILE_ID;
+static const char *kLoginInfoMagicAttrName = "mozLoginInfoMagic";
+static const char *kLoginInfoMagicAttrValue = "loginInfoMagic" UNIQUE_PROFILE_ID;
 
 /** attribute names for a login information entry */
-const char *kHostnameAttr = "hostname";
-const char *kFormSubmitURLAttr = "formSubmitURL";
-const char *kHttpRealmAttr = "httpRealm";
-const char *kUsernameFieldAttr = "usernameField";
-const char *kPasswordFieldAttr = "passwordField";
-const char *kUsernameAttr = "username";
-const char *kPasswordAttr = "password";
+static const char *kHostnameAttr = "hostname";
+static const char *kFormSubmitURLAttr = "formSubmitURL";
+static const char *kHttpRealmAttr = "httpRealm";
+static const char *kUsernameFieldAttr = "usernameField";
+static const char *kPasswordFieldAttr = "passwordField";
+static const char *kUsernameAttr = "username";
+static const char *kPasswordAttr = "password";
 
 /** magic signature that a keyring item represents disabled hostnames */
-const char *kDisabledHostMagicAttrName = "mozDisabledHostMagic";
-const char *kDisabledHostMagicAttrValue = "disabledHostMagic" UNIQUE_PROFILE_ID;
+static const char *kDisabledHostMagicAttrName = "mozDisabledHostMagic";
+static const char *kDisabledHostMagicAttrValue = "disabledHostMagic" UNIQUE_PROFILE_ID;
 
 /** attribute names for a disabled hostname entry */
-const char *kDisabledHostAttrName = "disabledHost";
+static const char *kDisabledHostAttrName = "disabledHost";
 
 // Utility macros and data structures
 
