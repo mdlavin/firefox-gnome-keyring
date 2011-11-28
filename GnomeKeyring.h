@@ -61,11 +61,11 @@ private:
 
   void
   appendAttributesFromBag(nsIPropertyBag *matchData,
-                          GnomeKeyringAttributeList **attributes);
+                          GnomeKeyringAttributeList *attributes);
 
   void
   appendItemInfoFromBag(nsIPropertyBag *matchData,
-                        GnomeKeyringItemInfo **itemInfo);
+                        GnomeKeyringItemInfo *itemInfo);
 
   nsresult
   deleteFoundItems(GList* foundList,

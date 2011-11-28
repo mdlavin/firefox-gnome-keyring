@@ -279,7 +279,7 @@ GnomeKeyring::buildAttributeList(nsILoginInfo *aLogin,
 /** attributes must already have loginInfo magic set */
 void
 GnomeKeyring::appendAttributesFromBag(nsIPropertyBag *matchData,
-                                      GnomeKeyringAttributeList** attributes)
+                                      GnomeKeyringAttributeList* attributes)
 {
   nsAutoString s, property;
   nsCOMPtr<nsIVariant> propValue;
@@ -288,44 +288,44 @@ GnomeKeyring::appendAttributesFromBag(nsIPropertyBag *matchData,
   property.AssignLiteral(kHostnameAttr);
   result = matchData->GetProperty(property, getter_AddRefs(propValue));
   if ( result != NS_ERROR_FAILURE ) {
-    GKATTR_CP(*attributes, propValue->GetAsAString, kHostnameAttr, s);
+    GKATTR_CP(attributes, propValue->GetAsAString, kHostnameAttr, s);
   }
 
   property.AssignLiteral(kUsernameAttr);
   result = matchData->GetProperty(property, getter_AddRefs(propValue));
   if ( result != NS_ERROR_FAILURE ) {
-    GKATTR_CP(*attributes, propValue->GetAsAString, kUsernameAttr, s);
+    GKATTR_CP(attributes, propValue->GetAsAString, kUsernameAttr, s);
   }
 
   property.AssignLiteral(kUsernameFieldAttr);
   result = matchData->GetProperty(property, getter_AddRefs(propValue));
   if ( result != NS_ERROR_FAILURE ) {
-    GKATTR_CP(*attributes, propValue->GetAsAString, kUsernameFieldAttr, s);
+    GKATTR_CP(attributes, propValue->GetAsAString, kUsernameFieldAttr, s);
   }
 
   property.AssignLiteral(kPasswordFieldAttr);
   result = matchData->GetProperty(property, getter_AddRefs(propValue));
   if ( result != NS_ERROR_FAILURE ) {
-    GKATTR_CP(*attributes, propValue->GetAsAString, kPasswordFieldAttr, s);
+    GKATTR_CP(attributes, propValue->GetAsAString, kPasswordFieldAttr, s);
   }
 
   // formSubmitURL and httpRealm are not guaranteed to be set.
   property.AssignLiteral(kFormSubmitURLAttr);
   result = matchData->GetProperty(property, getter_AddRefs(propValue));
   if ( result != NS_ERROR_FAILURE ) {
-    GKATTR_CP0(*attributes, propValue->GetAsAString, kFormSubmitURLAttr, s);
+    GKATTR_CP0(attributes, propValue->GetAsAString, kFormSubmitURLAttr, s);
   }
 
   property.AssignLiteral(kHttpRealmAttr);
   result = matchData->GetProperty(property, getter_AddRefs(propValue));
   if ( result != NS_ERROR_FAILURE ) {
-    GKATTR_CP0(*attributes, propValue->GetAsAString, kHttpRealmAttr, s);
+    GKATTR_CP0(attributes, propValue->GetAsAString, kHttpRealmAttr, s);
   }
 }
 
 void
 GnomeKeyring::appendItemInfoFromBag(nsIPropertyBag *matchData,
-                                    GnomeKeyringItemInfo** itemInfo)
+                                    GnomeKeyringItemInfo* itemInfo)
 {
   nsAutoString s, property;
   nsCOMPtr<nsIVariant> propValue;
@@ -335,7 +335,7 @@ GnomeKeyring::appendItemInfoFromBag(nsIPropertyBag *matchData,
   result = matchData->GetProperty(property, getter_AddRefs(propValue));
   if ( result != NS_ERROR_FAILURE ) {
     propValue->GetAsAString(s);
-    gnome_keyring_item_info_set_secret(*itemInfo,
+    gnome_keyring_item_info_set_secret(itemInfo,
                                        NS_ConvertUTF16toUTF8(s).get());
   }
 }
@@ -693,7 +693,7 @@ NS_IMETHODIMP GnomeKeyring::ModifyLogin(nsILoginInfo *oldLogin,
   }
 
   // set new attributes
-  appendAttributesFromBag(matchData.get(), &attributes);
+  appendAttributesFromBag(matchData.get(), attributes);
   result = gnome_keyring_item_set_attributes_sync(keyringName.get(),
                                                   id,
                                                   attributes);
@@ -705,7 +705,7 @@ NS_IMETHODIMP GnomeKeyring::ModifyLogin(nsILoginInfo *oldLogin,
                                             id,
                                             &itemInfo);
   MGK_GK_CHECK_NS(result);
-  appendItemInfoFromBag(matchData.get(), &itemInfo);
+  appendItemInfoFromBag(matchData.get(), itemInfo);
   result = gnome_keyring_item_set_info_sync(keyringName.get(),
                                             id,
                                             itemInfo);
@@ -751,7 +751,7 @@ NS_IMETHODIMP GnomeKeyring::SearchLogins(PRUint32 *count,
 {
   AutoAttributeList attributes;
   GKATTR_NEW_LI(attributes);
-  appendAttributesFromBag(matchData, &attributes);
+  appendAttributesFromBag(matchData, attributes);
 
   AutoFoundList foundList;
   GnomeKeyringResult result = findLoginItems(attributes, &foundList);
