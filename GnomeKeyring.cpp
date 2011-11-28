@@ -132,42 +132,6 @@ static const char *kDisabledHostAttrName = "disabledHost";
     }                                                         \
   PR_END_MACRO
 
-#define GKATTR_ADD(attr, name, value)                         \
-  {                                                           \
-    gnome_keyring_attribute_list_append_string(               \
-      attr, name, NS_ConvertUTF16toUTF8(value).get());        \
-  }
-
-#define GKATTR_CP(attr, getAttr, name, v)                     \
-  {                                                           \
-    getAttr(v);                                               \
-    GKATTR_ADD(attr, name, v);                                \
-  }
-
-#define GKATTR_CP0(attr, getAttr, name, v)                    \
-  {                                                           \
-    getAttr(v);                                               \
-    if (!v.IsVoid()) {                                        \
-      GKATTR_ADD(attr, name, v);                              \
-    }                                                         \
-  }
-
-#define GKATTR_NEW_LI(attr)                                   \
-  {                                                           \
-    GArray** a_attr = &attr;                                  \
-    *a_attr = gnome_keyring_attribute_list_new();             \
-    gnome_keyring_attribute_list_append_string(attr,          \
-      kLoginInfoMagicAttrName, kLoginInfoMagicAttrValue);     \
-  }
-
-#define GKATTR_NEW_DH(attr)                                   \
-  {                                                           \
-    GArray** a_attr = &attr;                                  \
-    *a_attr = gnome_keyring_attribute_list_new();             \
-    gnome_keyring_attribute_list_append_string(attr,          \
-      kDisabledHostMagicAttrName, kDisabledHostMagicAttrValue); \
-  }
-
 /**
  * Wrapper to automatically free a pointer to a complex data structure.
  */
@@ -261,83 +225,125 @@ matchKeyring(gconstpointer user_data, gpointer data)
 }
 
 void
-GnomeKeyring::buildAttributeList(nsILoginInfo *aLogin,
-                                 GnomeKeyringAttributeList** attributes)
+addAttribute(GnomeKeyringAttributeList* attributes,
+             const char* name,
+             const nsAString & value)
 {
-  nsAutoString s;
-  GKATTR_NEW_LI(*attributes);
+  gnome_keyring_attribute_list_append_string(
+          attributes, name, NS_ConvertUTF16toUTF8(value).get());
+}
 
-  GKATTR_CP(*attributes, aLogin->GetHostname, kHostnameAttr, s);
-  GKATTR_CP(*attributes, aLogin->GetUsername, kUsernameAttr, s);
-  GKATTR_CP(*attributes, aLogin->GetUsernameField, kUsernameFieldAttr, s);
-  GKATTR_CP(*attributes, aLogin->GetPasswordField, kPasswordFieldAttr, s);
+template<class T>
+void
+copyAttribute(GnomeKeyringAttributeList* attributes,
+              T* source,
+              nsresult (T::*getAttr)(nsAString&),
+              const char* name)
+{
+  nsAutoString value;
+  (source->*getAttr)(value);
+  addAttribute(attributes, name, value);
+}
+
+template<class T>
+void
+copyAttributeOr(GnomeKeyringAttributeList* attributes,
+                T* source,
+                nsresult (T::*getAttr)(nsAString&),
+                const char* name)
+{
+  nsAutoString value;
+  (source->*getAttr)(value);
+  if (!value.IsVoid()) {
+    addAttribute(attributes, name, value);
+  }
+}
+
+/** name is currently ignored and assumed to be kPasswordAttr */
+template<class T>
+void
+setSecret(GnomeKeyringItemInfo* itemInfo,
+          T* source,
+          nsresult (T::*getAttr)(nsAString&),
+          const char* name)
+{
+  nsAutoString value;
+  (source->*getAttr)(value);
+  gnome_keyring_item_info_set_secret(itemInfo,
+                                     NS_ConvertUTF16toUTF8(value).get());
+}
+
+template<class T>
+void
+withBagItem(nsIPropertyBag* source,
+            T* target,
+            void (*dothis)(T*,
+                           nsIVariant*,
+                           nsresult (nsIVariant::*)(nsAString&),
+                           const char*),
+            const char* name)
+{
+  nsAutoString property;
+  nsCOMPtr<nsIVariant> propValue;
+
+  property.AssignLiteral(name);
+  nsresult result = source->GetProperty(property, getter_AddRefs(propValue));
+  if ( result == NS_ERROR_FAILURE ) {
+    return;
+  }
+  dothis(target, propValue.get(), &nsIVariant::GetAsAString, name);
+}
+
+void
+newLoginInfoAttributes(GnomeKeyringAttributeList** attributes)
+{
+  *attributes = gnome_keyring_attribute_list_new();
+  gnome_keyring_attribute_list_append_string(
+          *attributes, kLoginInfoMagicAttrName, kLoginInfoMagicAttrValue);
+}
+
+void
+newDisabledHostsAttributes(GnomeKeyringAttributeList** attributes)
+{
+  *attributes = gnome_keyring_attribute_list_new();
+  gnome_keyring_attribute_list_append_string(
+          *attributes, kDisabledHostMagicAttrName, kDisabledHostMagicAttrValue);
+}
+
+void
+buildAttributeList(nsILoginInfo *aLogin,
+                   GnomeKeyringAttributeList** attrList)
+{
+  typedef nsILoginInfo L;
+  newLoginInfoAttributes(attrList);
+  copyAttribute(*attrList, aLogin, &L::GetHostname, kHostnameAttr);
+  copyAttribute(*attrList, aLogin, &L::GetUsername, kUsernameAttr);
+  copyAttribute(*attrList, aLogin, &L::GetUsernameField, kUsernameFieldAttr);
+  copyAttribute(*attrList, aLogin, &L::GetPasswordField, kPasswordFieldAttr);
   // formSubmitURL and httpRealm are not guaranteed to be set.
-  GKATTR_CP0(*attributes, aLogin->GetFormSubmitURL, kFormSubmitURLAttr, s);
-  GKATTR_CP0(*attributes, aLogin->GetHttpRealm, kHttpRealmAttr, s);
+  copyAttributeOr(*attrList, aLogin, &L::GetFormSubmitURL, kFormSubmitURLAttr);
+  copyAttributeOr(*attrList, aLogin, &L::GetHttpRealm, kHttpRealmAttr);
 }
 
 /** attributes must already have loginInfo magic set */
 void
-GnomeKeyring::appendAttributesFromBag(nsIPropertyBag *matchData,
-                                      GnomeKeyringAttributeList* attributes)
+appendAttributesFromBag(nsIPropertyBag *matchData,
+                        GnomeKeyringAttributeList* attrList)
 {
-  nsAutoString s, property;
-  nsCOMPtr<nsIVariant> propValue;
-  nsresult result;
-
-  property.AssignLiteral(kHostnameAttr);
-  result = matchData->GetProperty(property, getter_AddRefs(propValue));
-  if ( result != NS_ERROR_FAILURE ) {
-    GKATTR_CP(attributes, propValue->GetAsAString, kHostnameAttr, s);
-  }
-
-  property.AssignLiteral(kUsernameAttr);
-  result = matchData->GetProperty(property, getter_AddRefs(propValue));
-  if ( result != NS_ERROR_FAILURE ) {
-    GKATTR_CP(attributes, propValue->GetAsAString, kUsernameAttr, s);
-  }
-
-  property.AssignLiteral(kUsernameFieldAttr);
-  result = matchData->GetProperty(property, getter_AddRefs(propValue));
-  if ( result != NS_ERROR_FAILURE ) {
-    GKATTR_CP(attributes, propValue->GetAsAString, kUsernameFieldAttr, s);
-  }
-
-  property.AssignLiteral(kPasswordFieldAttr);
-  result = matchData->GetProperty(property, getter_AddRefs(propValue));
-  if ( result != NS_ERROR_FAILURE ) {
-    GKATTR_CP(attributes, propValue->GetAsAString, kPasswordFieldAttr, s);
-  }
-
+  withBagItem(matchData, attrList, copyAttribute, kHostnameAttr);
+  withBagItem(matchData, attrList, copyAttribute, kUsernameAttr);
+  withBagItem(matchData, attrList, copyAttribute, kUsernameFieldAttr);
+  withBagItem(matchData, attrList, copyAttribute, kPasswordFieldAttr);
   // formSubmitURL and httpRealm are not guaranteed to be set.
-  property.AssignLiteral(kFormSubmitURLAttr);
-  result = matchData->GetProperty(property, getter_AddRefs(propValue));
-  if ( result != NS_ERROR_FAILURE ) {
-    GKATTR_CP0(attributes, propValue->GetAsAString, kFormSubmitURLAttr, s);
-  }
-
-  property.AssignLiteral(kHttpRealmAttr);
-  result = matchData->GetProperty(property, getter_AddRefs(propValue));
-  if ( result != NS_ERROR_FAILURE ) {
-    GKATTR_CP0(attributes, propValue->GetAsAString, kHttpRealmAttr, s);
-  }
+  withBagItem(matchData, attrList, copyAttributeOr, kFormSubmitURLAttr);
+  withBagItem(matchData, attrList, copyAttributeOr, kHttpRealmAttr);
 }
 
 void
-GnomeKeyring::appendItemInfoFromBag(nsIPropertyBag *matchData,
-                                    GnomeKeyringItemInfo* itemInfo)
+appendItemInfoFromBag(nsIPropertyBag *matchData,
+                      GnomeKeyringItemInfo* itemInfo)
 {
-  nsAutoString s, property;
-  nsCOMPtr<nsIVariant> propValue;
-  nsresult result;
-
-  property.AssignLiteral(kPasswordAttr);
-  result = matchData->GetProperty(property, getter_AddRefs(propValue));
-  if ( result != NS_ERROR_FAILURE ) {
-    propValue->GetAsAString(s);
-    gnome_keyring_item_info_set_secret(itemInfo,
-                                       NS_ConvertUTF16toUTF8(s).get());
-  }
+  withBagItem(matchData, itemInfo, setSecret, kPasswordAttr);
 }
 
 nsresult
@@ -393,14 +399,14 @@ GnomeKeyring::findLogins(const nsAString & aHostname,
                          GList** found)
 {
   AutoAttributeList attributes;
-  GKATTR_NEW_LI(attributes);
+  newLoginInfoAttributes(&attributes);
 
-  GKATTR_ADD(attributes, kHostnameAttr, aHostname);
+  addAttribute(attributes, kHostnameAttr, aHostname);
   if (!aActionURL.IsVoid() && !aActionURL.IsEmpty()) {
-    GKATTR_ADD(attributes, kFormSubmitURLAttr, aActionURL);
+    addAttribute(attributes, kFormSubmitURLAttr, aActionURL);
   }
   if (!aHttpRealm.IsVoid() && !aHttpRealm.IsEmpty()) {
-    GKATTR_ADD(attributes, kHttpRealmAttr, aHttpRealm);
+    addAttribute(attributes, kHttpRealmAttr, aHttpRealm);
   }
 
   GnomeKeyringResult result = findLoginItems(attributes, found);
@@ -423,7 +429,7 @@ GnomeKeyringResult
 GnomeKeyring::findHostItemsAll(GList** found)
 {
   AutoAttributeList attributes;
-  GKATTR_NEW_DH(attributes);
+  newDisabledHostsAttributes(&attributes);
   return findItems(GNOME_KEYRING_ITEM_NOTE, attributes, found);
 }
 
@@ -432,8 +438,8 @@ GnomeKeyring::findHostItems(const nsAString & aHost,
                             GList** found)
 {
   AutoAttributeList attributes;
-  GKATTR_NEW_DH(attributes);
-  GKATTR_ADD(attributes, kDisabledHostAttrName, aHost);
+  newDisabledHostsAttributes(&attributes);
+  addAttribute(attributes, kDisabledHostAttrName, aHost);
   // TODO: expect only one
   return findItems(GNOME_KEYRING_ITEM_NOTE, attributes, found);
 }
@@ -717,7 +723,7 @@ NS_IMETHODIMP GnomeKeyring::ModifyLogin(nsILoginInfo *oldLogin,
 NS_IMETHODIMP GnomeKeyring::RemoveAllLogins()
 {
   AutoAttributeList attributes;
-  GKATTR_NEW_LI(attributes);
+  newLoginInfoAttributes(&attributes);
 
   AutoFoundList foundList;
   GnomeKeyringResult result = findLoginItems(attributes, &foundList);
@@ -730,7 +736,7 @@ NS_IMETHODIMP GnomeKeyring::GetAllLogins(PRUint32 *aCount,
                                          nsILoginInfo ***aLogins)
 {
   AutoAttributeList attributes;
-  GKATTR_NEW_LI(attributes);
+  newLoginInfoAttributes(&attributes);
 
   AutoFoundList foundList;
   GnomeKeyringResult result = findLoginItems(attributes, &foundList);
@@ -750,7 +756,7 @@ NS_IMETHODIMP GnomeKeyring::SearchLogins(PRUint32 *count,
                                          nsILoginInfo ***logins)
 {
   AutoAttributeList attributes;
-  GKATTR_NEW_LI(attributes);
+  newLoginInfoAttributes(&attributes);
   appendAttributesFromBag(matchData, attributes);
 
   AutoFoundList foundList;
@@ -797,8 +803,8 @@ NS_IMETHODIMP GnomeKeyring::SetLoginSavingEnabled(const nsAString & aHost,
   // TODO should check if host is already enabled
 
   AutoAttributeList attributes;
-  GKATTR_NEW_DH(attributes);
-  GKATTR_ADD(attributes, kDisabledHostAttrName, aHost);
+  newDisabledHostsAttributes(&attributes);
+  addAttribute(attributes, kDisabledHostAttrName, aHost);
 
   // TODO name should be more explicit
   const char* name = "Mozilla disabled host entry";
