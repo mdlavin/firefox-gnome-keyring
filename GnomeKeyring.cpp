@@ -479,7 +479,7 @@ foundToLoginInfo(GnomeKeyringFound* found)
     else
       NS_WARNING(("Unknown %s attribute name", attrName));
   }
-  NS_ADDREF(loginInfo);
+  NS_ADDREF((nsILoginInfo*) loginInfo);
   return loginInfo;
 }
 
