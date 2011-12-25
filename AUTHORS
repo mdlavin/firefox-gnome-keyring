@@ -1,0 +1,12 @@
+Note: the following list only includes authors with >1 commit to the git
+repository, and may be out-of-date. A more complete up-to-date list may
+be obtained by running:
+
+$ git shortlog -sn
+
+Florian Eitel
+Luca Niccoli
+Matt Lavin
+Mikko Rantalainen
+Sylvain Pasche
+Ximin Luo

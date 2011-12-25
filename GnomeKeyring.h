@@ -19,6 +19,9 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
+ * Matt Lavin <matt.lavin@gmail.com>
+ * Luca Niccoli <lultimouomo@gmail.com>
+ * Ximin Luo <infinity0@gmx.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
