@@ -1,62 +1,94 @@
-An extension to enable passwords and form logins to be stored in gnome-keyring
+A mozilla extension to store passwords and form logins in gnome-keyring
 
-This extension replaces the default password manager in both Firefox and
-Thunderbird with an implementation which stores the passwords in Gnome Keyring
-(i.e. seahorse).
+This replaces the default password manager in Firefox and Thunderbird
+with an implementation which uses Gnome Keyring. This is a centralised
+system-based password manager, which is more simple to handle than
+per-application management.
 
-This allows for safe storage of passwords without prompting for password after
-Firefox or Thunderbird has been started. You can also backup your passwords
-easily, without having to backup up all of the rest of your profile -
-gnome-keyring stores its data in ~/.gnome2/keyrings
+You can find more technical information on bugzilla[1] or on the github
+project pages[2].
 
-Notice: gnome-keyring stores the passwords encrypted on permanent storage but
-it keeps passwords in memory without encryption. As a result, other programs
-with access to memory space of gnome-keyring (namely debuggers and applications
-running as root) may be able to extract the passwords. The same applies to
-internal Firefox and Thunderbird implementations so use of this extension
-should not be any less secure than the default implementation. The passwords are
-decrypted once the keyring has been opened (the keyring called "login" will be
-automatically opened once you login, if its password is identical to your login
-password). Your passwords are stored only in encrypted form when you are not
-logged in, or when you explicitly re-lock the keyring via the seahorse UI.
+[1] https://bugzilla.mozilla.org/show_bug.cgi?id=309807
+[2] https://github.com/mdlavin/firefox-gnome-keyring
 
-some basic infos about the extension:
+## Usage
 
-there’s no migration facility atm, if you move from ff integrated password
-manager to gnome keyring you’ll need to save all the passwords again. this is
-less of a problem in firefox 7+ whose password manager lets you right-click and
-do "copy password".
+You can change the keyring in which passwords are saved by creating or
+editing the preference item "extensions.gnome-keyring.keyringName". The
+default keyring is "mozilla". This is a per-profile setting, so if you
+don't manually change it, all profiles will share the same keyring.
 
-saved password in ff remain untouched, so remember to delete them when the
-add-on is inactive if you decided to move. if you set a master password, when
-you click on preferences→security→saved passwords→ show passwords you still get
-asked for it, even if gnome keyring is active. you can change the keyring in
-which passwords are saved by creating/editing the preference item
-extensions.gnome-keyring.keyringName. The default is "mozilla".
+You can backup your passwords easily, separately from the rest of your
+mozilla profile. Your keyrings are stored ~/.gnome2/keyrings - even
+gnome-keyring 3.2 does this, although this may change in the future.
 
-You can find more technical information on bugzilla
-(https://bugzilla.mozilla.org/show_bug.cgi?id=309807)
+You can also take advantage of the more fine-tuned keyring management
+features of gnome-keyring, such as:
 
+- no need to prompt for password, if you store in the "login" keyring
+  and the password for that keyring is the same as your login password.
+- if the keyring is already open, don't need to prompt for a password
+  each time you start Firefox or Thunderbird.
+- you can explicitly re-lock the keyring when you feel you need to.
+- in gnome-keyring 3, you can set policies to automatically re-lock the
+  keyring after e.g. a certain amount of time, or a certain amount of
+  time being idle.
+
+Note: gnome-keyring stores the passwords encrypted on permanent storage
+but it keeps unlocked passwords in memory without encryption. As a
+result, programs with access to the memory space of gnome-keyring (such
+as debuggers and applications running as root) may be able to extract
+the passwords. The same applies to the default Firefox and Thunderbird
+implementations, so this extension should not be any less secure.
+
+## Migrating old passwords
+
+Currently there is no migration facility. If you have many passwords in
+the default password manager, you'll need to manually transfer them
+to gnome-keyring:
+
+* copy+paste all passwords to a "new file" in a text editor. DO NOT
+  SAVE this to disk!!
+  * In the password manager for Firefox 7+ you can right-click and do
+    "copy password", which makes this a little easier. For earlier
+    versions, you'll need to manually type the password. Sorry.
+* install this extension and restart your programe
+* visit each website in turn and login again, which should trigger the
+  "save password" prompt
+
+Your old data in the default password manager remains untouched, so you
+also need to delete that manually if you want to. This is done by going
+to your profile folder and deleting the key3.db and signons.sqlite files
+(signons.txt or signons2.txt for older versions). The old data may still
+be forensically retrievable from your disk, but it was encrypted anyway
+so it shouldn't matter too much.
+
+Deleting old data will also clear the master password for the default
+password manager. If you don't clear it, you'll still be asked for it
+when you choose to "show passwords", even if this extension is active.
+
+## Developer information
 
 Build dependencies:
- * libgnome-keyring-devel
- * xulrunner-devel
-
+* libgnome-keyring-devel (may be called libgnome-keyring-dev)
+* xulrunner-devel (may be called xulrunner-dev)
 
 Tested on:
- - Ubuntu 10.04 with Firefox 3.6.7 by <der.claudio@gmail.com>
- - Ubuntu 10.10 with Firefox 3.6.12 and Thunderbird 3.1.6 (see bugs)
- - Arch Linux
- - Gentoo Linux with Firefox 3.6.12 and Thunderbird 3.1.6
- - Debian wheezy/sid with Iceweasel 7.0.1
-
+- Debian wheezy/sid:
+  - Iceweasel 7.0.1, 8.0, 9.0.1, 10.0 - by infinity0
+  - Gnome Keyring 2.32, 3.2.2 - by infinity0
+- Ubuntu 10.04 with Firefox 3.6.7 by <der.claudio@gmail.com>
+- Ubuntu 10.10 with Firefox 3.6.12 and Thunderbird 3.1.6 (see bugs)
+- Gentoo Linux with Firefox 3.6.12 and Thunderbird 3.1.6
+- Arch Linux
 
 Known Bugs:
-- Problems on Ubuntu 8.10 installation with Thundebird 3.1.6:
+- Problems on Ubuntu 8.10 with Thunderbird 3.1.6:
     It is necessary to copy libxul.so and libxpcom.so from
-    /usr/lib/xulrunner-*/ into /usr/lib/thunderbird-*/ folder. See issue #4.
-    I'am thankful for any hints why this Problem exists. And status
-    on different distributions (no problem on gentoo).
+    /usr/lib/xulrunner-*/ into /usr/lib/thunderbird-*/ folder.
+    See issue #4. I'd be thankful for any hints why this problem exists,
+    and its status on different distributions.
+    - There is no problem on gentoo.
 
 --
 #4: https://github.com/mdlavin/firefox-gnome-keyring/issues/#issue/4
