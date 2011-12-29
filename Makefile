@@ -61,6 +61,11 @@ $(TARGET): GnomeKeyring.cpp GnomeKeyring.h Makefile
 	    $(CXXFLAGS) $(GECKO_DEFINES)
 	chmod +x $@
 
+tarball:
+	git archive --format=tar \
+	    --prefix=firefox-gnome-keyring-$(VERSION)/ HEAD \
+	    | gzip - > firefox-gnome-keyring-$(VERSION).tar.gz
+
 .PHONY: clean-all clean
 clean:
 	rm -f $(TARGET)
