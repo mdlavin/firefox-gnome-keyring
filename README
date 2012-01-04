@@ -33,6 +33,9 @@ features of gnome-keyring, such as:
 - in gnome-keyring 3, you can set policies to automatically re-lock the
   keyring after e.g. a certain amount of time, or a certain amount of
   time being idle.
+- in gnome-keyring 3, the keyring password prompt disables keyboard
+  input to other windows, so you don't need to worry about accidentally
+  typing it somewhere you shouldn't
 
 Note: gnome-keyring stores the passwords encrypted on permanent storage
 but it keeps unlocked passwords in memory without encryption. As a
@@ -47,21 +50,29 @@ Currently there is no migration facility. If you have many passwords in
 the default password manager, you'll need to manually transfer them
 to gnome-keyring:
 
-* copy+paste all passwords to a "new file" in a text editor. DO NOT
-  SAVE this to disk!!
+* create a TEMP profile, and install/enable this extension in it
+* in the TEMP profile, edit extensions.gnome-keyring.keyringName to
+  whatever you eventually want to use
+* restart the TEMP profile for setting changes to take effect
+* open up the SUBJ profile using "firefox -no-remote -P <SUBJ name>"
+  so that you have *both* profiles open
+* open up the password manager on the SUBJ profile
+* for each website list, visit it in the TEMP profile and login again,
+  which should trigger the "save password" prompt
   * In the password manager for Firefox 7+ you can right-click and do
     "copy password", which makes this a little easier. For earlier
     versions, you'll need to manually type the password. Sorry.
-* install this extension and restart your programe
-* visit each website in turn and login again, which should trigger the
-  "save password" prompt
+* close the TEMP profile and delete it.
+* in the SUBJ profile, install/enable this extension, and edit
+  extensions.gnome-keyring.keyringName to whatever you chose before
+* restart the SUBJ profile for setting changes to take effect
 
 Your old data in the default password manager remains untouched, so you
 also need to delete that manually if you want to. This is done by going
-to your profile folder and deleting the key3.db and signons.sqlite files
-(signons.txt or signons2.txt for older versions). The old data may still
-be forensically retrievable from your disk, but it was encrypted anyway
-so it shouldn't matter too much.
+to your profile folder, and deleting the key3.db and signons.sqlite
+files (signons.txt/signons2.txt for older versions). The old data may
+still be forensically retrievable from your disk, but it was encrypted
+anyway so it shouldn't matter too much.
 
 Deleting old data will also clear the master password for the default
 password manager. If you don't clear it, you'll still be asked for it
