@@ -1,8 +1,16 @@
-XUL_PKG_NAME     := $(shell (pkg-config --atleast-version=2 libxul && echo libxul) || (pkg-config libxul2 && echo libxul2))
-XULRUNNER        := $(shell find -L $$(dirname $$(pkg-config --libs-only-L $(XUL_PKG_NAME) | tail -c+3)) -name xulrunner)
-# versions to set if "xulrunner" tool is not available
+PACKAGE          ?= firefox-gnome-keyring
+VERSION          ?= $(shell git describe --tags 2>/dev/null || date +dev-%s)
+# max/min compatibility versions to set, only if "xulrunner" tool is not available
 XUL_VER_MIN      ?= 6.0.1
 XUL_VER_MAX      ?= 6.*
+# package distribution variables
+FULLNAME         ?= $(PACKAGE)-$(VERSION)
+ARCHIVENAME      ?= $(FULLNAME)
+
+
+# xulrunner tools. use = not ?= so we don't execute on every invocation
+XUL_PKG_NAME     = $(shell (pkg-config --atleast-version=2 libxul && echo libxul) || (pkg-config libxul2 && echo libxul2))
+XULRUNNER        = $(shell find -L $$(dirname $$(pkg-config --libs-only-L $(XUL_PKG_NAME) | tail -c+3)) -name xulrunner)
 
 # compilation flags
 XUL_CFLAGS       := `pkg-config --cflags $(XUL_PKG_NAME) gnome-keyring-1` -DMOZ_NO_MOZALLOC
@@ -15,7 +23,6 @@ ARCH             := $(shell uname -m)
 ARCH             := $(shell echo ${ARCH} | sed 's/i686/x86/')
 PLATFORM         := $(shell uname)_$(ARCH)-gcc3
 
-VERSION          ?= $(shell git describe --tags 2>/dev/null || date +dev-%s)
 TARGET           := libgnomekeyring.so
 XPI_TARGET       := gnome-keyring_password_integration-$(VERSION).xpi
 
@@ -25,7 +32,7 @@ xpi/install.rdf \
 xpi/chrome.manifest
 
 
-.PHONY: all build build-xpi
+.PHONY: all build build-xpi tarball
 all: build
 
 build: build-xpi
@@ -63,8 +70,8 @@ $(TARGET): GnomeKeyring.cpp GnomeKeyring.h Makefile
 
 tarball:
 	git archive --format=tar \
-	    --prefix=firefox-gnome-keyring-$(VERSION)/ HEAD \
-	    | gzip - > firefox-gnome-keyring-$(VERSION).tar.gz
+	    --prefix=$(FULLNAME)/ HEAD \
+	    | gzip - > $(ARCHIVENAME).tar.gz
 
 .PHONY: clean-all clean
 clean:
@@ -74,3 +81,4 @@ clean:
 
 clean-all: clean
 	rm -f *.xpi
+	rm -f *.tar.gz
