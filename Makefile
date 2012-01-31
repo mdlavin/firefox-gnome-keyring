@@ -13,10 +13,11 @@ XUL_PKG_NAME     = $(shell (pkg-config --atleast-version=2 libxul && echo libxul
 XULRUNNER        = $(shell find -L $$(dirname $$(pkg-config --libs-only-L $(XUL_PKG_NAME) | tail -c+3)) -name xulrunner)
 
 # compilation flags
-XUL_CFLAGS       := `pkg-config --cflags $(XUL_PKG_NAME) gnome-keyring-1` -DMOZ_NO_MOZALLOC
+XUL_CFLAGS       := `pkg-config --cflags $(XUL_PKG_NAME)` -DMOZ_NO_MOZALLOC
 XUL_LDFLAGS      := `pkg-config --libs $(XUL_PKG_NAME) | sed 's/xpcomglue_s/xpcomglue_s_nomozalloc/' | sed 's/-lmozalloc//'`
+GNOME_CFLAGS     := `pkg-config --cflags gnome-keyring-1`
 GNOME_LDFLAGS    := `pkg-config --libs gnome-keyring-1`
-CPPFLAGS         += -fno-rtti -fno-exceptions -shared -fPIC -g -std=gnu++0x
+CXXFLAGS         += -fno-rtti -fno-exceptions -shared -fPIC -g -std=gnu++0x
 
 # construct Mozilla architectures string
 ARCH             := $(shell uname -m)
@@ -64,8 +65,7 @@ xpi/chrome.manifest: chrome.manifest Makefile
 $(TARGET): GnomeKeyring.cpp GnomeKeyring.h Makefile
 	test -n $(XUL_PKG_NAME) || { echo "libxul missing" && false; }
 	$(CXX) $< -g -Wall -o $@ \
-	    $(XUL_CFLAGS) $(XUL_LDFLAGS) $(GNOME_LDFLAGS) $(CPPFLAGS) \
-	    $(CXXFLAGS) $(GECKO_DEFINES)
+	    $(XUL_CFLAGS) $(XUL_LDFLAGS) $(GNOME_CFLAGS) $(GNOME_LDFLAGS) $(CXXFLAGS)
 	chmod +x $@
 
 tarball:
