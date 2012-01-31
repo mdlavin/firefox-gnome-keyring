@@ -9,15 +9,25 @@ ARCHIVENAME      ?= $(FULLNAME)
 
 
 # xulrunner tools. use = not ?= so we don't execute on every invocation
-XUL_PKG_NAME     = $(shell (pkg-config --atleast-version=2 libxul && echo libxul) || (pkg-config libxul2 && echo libxul2))
-XULRUNNER        = $(shell find -L $$(dirname $$(pkg-config --libs-only-L $(XUL_PKG_NAME) | tail -c+3)) -name xulrunner)
+XUL_PKG_NAME     = $(shell (pkg-config --atleast-version=2 libxul && echo libxul) \
+                        || (pkg-config libxul2                    && echo libxul2))
 
 # compilation flags
+
+# if pkgconfig file for libxul is available, use it
+ifdef XUL_PKG_NAME
 XUL_CFLAGS       := `pkg-config --cflags $(XUL_PKG_NAME)` -DMOZ_NO_MOZALLOC
 XUL_LDFLAGS      := `pkg-config --libs $(XUL_PKG_NAME) | sed 's/xpcomglue_s/xpcomglue_s_nomozalloc/' | sed 's/-lmozalloc//'`
+endif
+
 GNOME_CFLAGS     := `pkg-config --cflags gnome-keyring-1`
 GNOME_LDFLAGS    := `pkg-config --libs gnome-keyring-1`
 CXXFLAGS         += -fno-rtti -fno-exceptions -shared -fPIC -g -std=gnu++0x
+
+# determine xul version from "mozilla-config.h" include file
+XUL_VERSION      = $(shell echo '\#include "mozilla-config.h"'| \
+                     g++ $(XUL_CFLAGS) $(CXXFLAGS) -x c++ -w -E -fdirectives-only - | \
+                     sed -n -e 's/\#[[:space:]]*define[[:space:]]\+MOZILLA_VERSION[[:space:]]\+\"\(.*\)\"/\1/gp')
 
 # construct Mozilla architectures string
 ARCH             := $(shell uname -m)
@@ -49,8 +59,8 @@ xpi/platform/$(PLATFORM)/components/$(TARGET): $(TARGET)
 
 xpi/install.rdf: install.rdf Makefile
 	mkdir -p xpi
-	XUL_VER_MIN=`$(XULRUNNER) --gre-version`; \
-	XUL_VER_MAX=`$(XULRUNNER) --gre-version | sed -rn -e 's/([^.]+).*/\1.*/gp'`; \
+	XUL_VER_MIN=$(XUL_VERSION); \
+	XUL_VER_MAX=`echo $(XUL_VERSION) | sed -rn -e 's/([^.]+).*/\1.*/gp'`; \
 	sed -e 's/$${PLATFORM}/'$(PLATFORM)'/g' \
 	    -e 's/$${VERSION}/'$(VERSION)'/g' \
 	    -e 's/$${XUL_VER_MIN}/'"$${XUL_VER_MIN:-$(XUL_VER_MIN)}"'/g' \
@@ -63,7 +73,6 @@ xpi/chrome.manifest: chrome.manifest Makefile
 	    $< > $@
 
 $(TARGET): GnomeKeyring.cpp GnomeKeyring.h Makefile
-	test -n $(XUL_PKG_NAME) || { echo "libxul missing" && false; }
 	$(CXX) $< -g -Wall -o $@ \
 	    $(XUL_CFLAGS) $(XUL_LDFLAGS) $(GNOME_CFLAGS) $(GNOME_LDFLAGS) $(CXXFLAGS)
 	chmod +x $@
@@ -82,3 +91,4 @@ clean:
 clean-all: clean
 	rm -f *.xpi
 	rm -f *.tar.gz
+
