@@ -62,7 +62,7 @@ xpi/chrome.manifest: chrome.manifest Makefile
 	    $< > $@
 
 $(TARGET): GnomeKeyring.cpp GnomeKeyring.h Makefile
-	test -n $(XUL_PKG_NAME) || { echo "libxul missing" && false; }
+	test -n "$(XUL_PKG_NAME)" || { echo "libxul missing" && false; }
 	$(CXX) $< -g -Wall -o $@ \
 	    $(XUL_CFLAGS) $(XUL_LDFLAGS) $(GNOME_LDFLAGS) $(CPPFLAGS) \
 	    $(CXXFLAGS) $(GECKO_DEFINES)
