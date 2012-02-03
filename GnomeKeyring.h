@@ -60,7 +60,7 @@ class GnomeKeyring : public nsILoginManagerStorage
 private:
   nsresult
   deleteFoundItems(GList* foundList,
-                   PRBool);
+                   bool);
 
   GnomeKeyringResult
   findItems(GnomeKeyringItemType type,
