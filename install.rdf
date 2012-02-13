@@ -28,8 +28,8 @@
 
     <em:targetPlatform>${PLATFORM}</em:targetPlatform>
 
-    <em:name>Gnome-keyring password integration</em:name>
-    <em:description>An extension to enable passwords and form logins to be stored in gnome-keyring</em:description>
+    <em:name>GNOME Keyring integration</em:name>
+    <em:description>Store passwords and form logins in GNOME Keyring.</em:description>
     <em:creator>Matt Lavin</em:creator>
     <em:unpack>true</em:unpack>
   </Description>
