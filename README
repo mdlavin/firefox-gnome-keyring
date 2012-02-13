@@ -87,6 +87,7 @@ Build dependencies:
 Tested on:
 - Debian wheezy/sid:
   - Iceweasel 7.0.1, 8.0, 9.0.1, 10.0 - by infinity0
+  - Icedove 9.0.1 - by infinity0
   - Gnome Keyring 2.32, 3.2.2 - by infinity0
 - Ubuntu 10.04 with Firefox 3.6.7 by <der.claudio@gmail.com>
 - Ubuntu 10.10 with Firefox 3.6.12 and Thunderbird 3.1.6 (see bugs)
