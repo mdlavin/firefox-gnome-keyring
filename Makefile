@@ -1,4 +1,4 @@
-PACKAGE          ?= firefox-gnome-keyring
+PACKAGE          ?= mozilla-gnome-keyring
 VERSION          ?= $(shell git describe --tags 2>/dev/null || date +dev-%s)
 # max/min compatibility versions to set, only if "xulrunner" tool is not available
 XUL_VER_MIN      ?= 6.0.1
