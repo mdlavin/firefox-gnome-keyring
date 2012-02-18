@@ -1,3 +1,4 @@
 /xpi
-/gnome-keyring_password_integration*.xpi
+/mozilla-gnome-keyring-*.xpi
 /libgnomekeyring.so
+/xpcom_abi

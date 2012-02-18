@@ -1,8 +1,8 @@
 PACKAGE          ?= mozilla-gnome-keyring
 VERSION          ?= $(shell git describe --tags 2>/dev/null || date +dev-%s)
 # max/min compatibility versions to set, only if "xulrunner" tool is not available
-XUL_VER_MIN      ?= 6.0.1
-XUL_VER_MAX      ?= 6.*
+XUL_VER_MIN      ?= 10.0.1
+XUL_VER_MAX      ?= 10.*
 # package distribution variables
 FULLNAME         ?= $(PACKAGE)-$(VERSION)
 ARCHIVENAME      ?= $(FULLNAME)
@@ -16,26 +16,25 @@ XUL_PKG_NAME     = $(shell (pkg-config --atleast-version=2 libxul && echo libxul
 
 # if pkgconfig file for libxul is available, use it
 ifdef XUL_PKG_NAME
-XUL_CFLAGS       := `pkg-config --cflags $(XUL_PKG_NAME)` -DMOZ_NO_MOZALLOC
-XUL_LDFLAGS      := `pkg-config --libs $(XUL_PKG_NAME) | sed 's/xpcomglue_s/xpcomglue_s_nomozalloc/' | sed 's/-lmozalloc//'`
+XUL_CFLAGS       := `pkg-config --cflags $(XUL_PKG_NAME)`
+XUL_LDFLAGS      := `pkg-config --libs $(XUL_PKG_NAME)`
+XUL_LIBRARY_PATH := `pkg-config --libs-only-L $(XUL_PKG_NAME) | sed -e 's/-L\(\S*\).*/\1/'`
 endif
 
 GNOME_CFLAGS     := `pkg-config --cflags gnome-keyring-1`
 GNOME_LDFLAGS    := `pkg-config --libs gnome-keyring-1`
-CXXFLAGS         += -fno-rtti -fno-exceptions -shared -fPIC -g -std=gnu++0x
+CXXFLAGS         += -Wall -fno-rtti -fno-exceptions -fPIC -std=gnu++0x
 
 # determine xul version from "mozilla-config.h" include file
 XUL_VERSION      = $(shell echo '\#include "mozilla-config.h"'| \
-                     g++ $(XUL_CFLAGS) $(CXXFLAGS) -x c++ -w -E -fdirectives-only - | \
+                     $(CXX) $(XUL_CFLAGS) $(CXXFLAGS) -shared -x c++ -w -E -fdirectives-only - | \
                      sed -n -e 's/\#[[:space:]]*define[[:space:]]\+MOZILLA_VERSION[[:space:]]\+\"\(.*\)\"/\1/gp')
 
 # construct Mozilla architectures string
-ARCH             := $(shell uname -m)
-ARCH             := $(shell echo ${ARCH} | sed 's/i686/x86/')
-PLATFORM         := $(shell uname)_$(ARCH)-gcc3
+PLATFORM         ?= $(shell make -s get_abi PLATFORM=unknown || echo unknown)
 
 TARGET           := libgnomekeyring.so
-XPI_TARGET       := gnome-keyring_password_integration-$(VERSION).xpi
+XPI_TARGET       := $(FULLNAME).xpi
 
 BUILD_FILES      := \
 xpi/platform/$(PLATFORM)/components/$(TARGET) \
@@ -43,7 +42,7 @@ xpi/install.rdf \
 xpi/chrome.manifest
 
 
-.PHONY: all build build-xpi tarball
+.PHONY: all build build-xpi tarball get_abi
 all: build
 
 build: build-xpi
@@ -73,9 +72,15 @@ xpi/chrome.manifest: chrome.manifest Makefile
 	    $< > $@
 
 $(TARGET): GnomeKeyring.cpp GnomeKeyring.h Makefile
-	$(CXX) $< -g -Wall -o $@ \
+	$(CXX) $< -o $@ -shared \
 	    $(XUL_CFLAGS) $(XUL_LDFLAGS) $(GNOME_CFLAGS) $(GNOME_LDFLAGS) $(CXXFLAGS)
 	chmod +x $@
+
+xpcom_abi: xpcom_abi.cpp Makefile
+	$(CXX) $< -o $@ $(XUL_CFLAGS) $(XUL_LDFLAGS) $(CXXFLAGS)
+
+get_abi: xpcom_abi
+	LD_LIBRARY_PATH=$(XUL_LIBRARY_PATH) ./xpcom_abi
 
 tarball:
 	git archive --format=tar \
@@ -86,9 +91,9 @@ tarball:
 clean:
 	rm -f $(TARGET)
 	rm -f $(XPI_TARGET)
+	rm -f xpcom_abi
 	rm -f -r xpi
 
 clean-all: clean
 	rm -f *.xpi
 	rm -f *.tar.gz
-
