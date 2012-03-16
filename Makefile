@@ -18,7 +18,7 @@ XUL_PKG_NAME     = $(shell (pkg-config --atleast-version=2 libxul && echo libxul
 ifdef XUL_PKG_NAME
 XUL_CFLAGS       := `pkg-config --cflags $(XUL_PKG_NAME)`
 XUL_LDFLAGS      := `pkg-config --libs $(XUL_PKG_NAME)`
-XUL_LIBRARY_PATH := `pkg-config --libs-only-L $(XUL_PKG_NAME) | sed -e 's/-L\(\S*\).*/\1/'`
+XPCOM_ABI_FLAGS  += -Wl`pkg-config --libs-only-L $(XUL_PKG_NAME) | sed -e 's/-L\(\S*\).*/,-rpath=\1/'`
 endif
 
 GNOME_CFLAGS     := `pkg-config --cflags gnome-keyring-1`
@@ -84,10 +84,10 @@ $(TARGET): GnomeKeyring.cpp GnomeKeyring.h Makefile
 	chmod +x $@
 
 xpcom_abi: xpcom_abi.cpp Makefile
-	$(CXX) $< -o $@ $(XUL_CFLAGS) $(XUL_LDFLAGS) $(CXXFLAGS)
+	$(CXX) $< -o $@ $(XUL_CFLAGS) $(XUL_LDFLAGS) $(XPCOM_ABI_FLAGS) $(CXXFLAGS)
 
 get_abi: xpcom_abi
-	LD_LIBRARY_PATH=$(XUL_LIBRARY_PATH) ./xpcom_abi
+	./xpcom_abi
 
 tarball:
 	git archive --format=tar \
