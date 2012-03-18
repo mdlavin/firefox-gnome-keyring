@@ -30,12 +30,13 @@ XUL_VERSION      = $(shell echo '\#include "mozilla-config.h"'| \
                      $(CXX) $(XUL_CFLAGS) $(CXXFLAGS) -shared -x c++ -w -E -fdirectives-only - | \
                      sed -n -e 's/\#[[:space:]]*define[[:space:]]\+MOZILLA_VERSION[[:space:]]\+\"\(.*\)\"/\1/gp')
 
-# construct Mozilla architectures string
-PLATFORM         ?= $(shell make -s get_abi PLATFORM=unknown || echo unknown)
+# platform-specific handling
+# lazy variables, instantiated properly in a sub-make since make doesn't
+# support dynamically adjusting the dependency tree during its run
+PLATFORM         ?= unknown
 
 TARGET           := libgnomekeyring.so
 XPI_TARGET       := $(FULLNAME).xpi
-
 BUILD_FILES      := \
 xpi/platform/$(PLATFORM)/components/$(TARGET) \
 xpi/install.rdf \
@@ -47,13 +48,19 @@ all: build
 
 build: build-xpi
 
-build-xpi: $(XPI_TARGET)
+build-xpi:
+ifeq "$(PLATFORM)" "unknown"
+# set PLATFORM properly in a sub-make
+	$(MAKE) $(XPI_TARGET) PLATFORM=`make -s get_abi || echo unknown`
+else
+	$(MAKE) $(XPI_TARGET)
+endif
 
 $(XPI_TARGET): $(BUILD_FILES)
 	cd xpi && zip -rq ../$@ *
 
-xpi/platform/$(PLATFORM)/components/$(TARGET): $(TARGET)
-	mkdir -p xpi/platform/$(PLATFORM)/components
+xpi/platform/%/components/$(TARGET): $(TARGET)
+	mkdir -p $(@D)
 	cp -a $< $@
 
 xpi/install.rdf: install.rdf Makefile
