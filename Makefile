@@ -43,15 +43,15 @@ xpi/install.rdf \
 xpi/chrome.manifest
 
 
-.PHONY: all build build-xpi tarball get_abi
+.PHONY: all build build-xpi tarball
 all: build
 
 build: build-xpi
 
-build-xpi:
+build-xpi: xpcom_abi
 ifeq "$(PLATFORM)" "unknown"
 # set PLATFORM properly in a sub-make
-	$(MAKE) $(XPI_TARGET) PLATFORM=`make -s get_abi || echo unknown`
+	$(MAKE) $(XPI_TARGET) PLATFORM=`./xpcom_abi || echo unknown`
 else
 	$(MAKE) $(XPI_TARGET)
 endif
@@ -85,9 +85,6 @@ $(TARGET): GnomeKeyring.cpp GnomeKeyring.h Makefile
 
 xpcom_abi: xpcom_abi.cpp Makefile
 	$(CXX) $< -o $@ $(XUL_CFLAGS) $(XUL_LDFLAGS) $(XPCOM_ABI_FLAGS) $(CXXFLAGS)
-
-get_abi: xpcom_abi
-	./xpcom_abi
 
 tarball:
 	git archive --format=tar \
