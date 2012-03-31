@@ -70,9 +70,10 @@ to gnome-keyring:
 Your old data in the default password manager remains untouched, so you
 also need to delete that manually if you want to. This is done by going
 to your profile folder, and deleting the key3.db and signons.sqlite
-files (signons.txt/signons2.txt for older versions). The old data may
-still be forensically retrievable from your disk, but it was encrypted
-anyway so it shouldn't matter too much.
+files (signons.txt/signons2.txt/signons3.txt for older versions). The old
+data may still be forensically retrievable from your disk, but it was
+encrypted anyway so it shouldn't matter too much.
+
 
 Deleting old data will also clear the master password for the default
 password manager. If you don't clear it, you'll still be asked for it
