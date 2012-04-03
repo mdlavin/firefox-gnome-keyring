@@ -44,6 +44,20 @@ as debuggers and applications running as root) may be able to extract
 the passwords. The same applies to the default Firefox and Thunderbird
 implementations, so this extension should not be any less secure.
 
+## Non-working cases and workarounds
+
+Passwords will not be saved or filled in if:
+
+- the username or password element has attribute autocomplete="on"
+  - workaround: delete the attribute using the DOM inspector
+
+- the username or password element is already filled in by the page
+  - see https://bugzilla.mozilla.org/show_bug.cgi?id=354706
+  - note: not a browser bug
+
+- (mozilla bug): the page is XML+XSLT
+  - see https://bugzilla.mozilla.org/show_bug.cgi?id=618698
+
 ## Migrating old passwords
 
 Currently there is no migration facility. If you have many passwords in
@@ -70,10 +84,10 @@ to gnome-keyring:
 Your old data in the default password manager remains untouched, so you
 also need to delete that manually if you want to. This is done by going
 to your profile folder, and deleting the key3.db and signons.sqlite
-files (signons.txt/signons2.txt/signons3.txt for older versions). The old
-data may still be forensically retrievable from your disk, but it was
-encrypted anyway so it shouldn't matter too much.
-
+files (signons.txt/signons2.txt/signons3.txt for older versions). The
+old data may still be forensically retrievable from your disk, but if
+you were protecting it with a master password, this data would still be
+be encrypted.
 
 Deleting old data will also clear the master password for the default
 password manager. If you don't clear it, you'll still be asked for it
@@ -88,7 +102,7 @@ Build dependencies:
 Tested on:
 - Debian wheezy/sid:
   - Iceweasel 7.0.1, 8.0, 9.0.1, 10.0 - by infinity0
-  - Icedove 9.0.1 - by infinity0
+  - Icedove 9.0.1, 10.0.3 - by infinity0
   - Gnome Keyring 2.32, 3.2.2 - by infinity0
 - Ubuntu 10.04 with Firefox 3.6.7 by <der.claudio@gmail.com>
 - Ubuntu 10.10 with Firefox 3.6.12 and Thunderbird 3.1.6 (see bugs)
