@@ -15,7 +15,7 @@ XUL_PKG_NAME     = $(shell (pkg-config --atleast-version=2 libxul && echo libxul
 # compilation flags
 
 # if pkgconfig file for libxul is available, use it
-ifdef XUL_PKG_NAME
+ifneq ($(XUL_PKG_NAME),)
 XUL_CFLAGS       := `pkg-config --cflags $(XUL_PKG_NAME)`
 XUL_LDFLAGS      := `pkg-config --libs $(XUL_PKG_NAME)`
 XPCOM_ABI_FLAGS  += -Wl`pkg-config --libs-only-L $(XUL_PKG_NAME) | sed -e 's/-L\(\S*\).*/,-rpath=\1/'`
