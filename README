@@ -52,11 +52,11 @@ Passwords will not be saved or filled in if:
   - workaround: delete the attribute using the DOM inspector
 
 - the username or password element is already filled in by the page
-  - see https://bugzilla.mozilla.org/show_bug.cgi?id=354706
+  - see https://bugzilla.mozilla.org/show_bug.cgi?id=618698
   - note: not a browser bug
 
 - (mozilla bug): the page is XML+XSLT
-  - see https://bugzilla.mozilla.org/show_bug.cgi?id=618698
+  - see https://bugzilla.mozilla.org/show_bug.cgi?id=354706
 
 ## Migrating old passwords
 
