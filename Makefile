@@ -1,8 +1,8 @@
 PACKAGE          ?= mozilla-gnome-keyring
 VERSION          ?= $(shell git describe --tags 2>/dev/null || date +dev-%s)
 # if these are empty, we will attempt to auto-detect correct values
-XUL_VER_MIN      ?=
-XUL_VER_MAX      ?=
+#XUL_VER_MIN      ?=
+#XUL_VER_MAX      ?=
 # package distribution variables
 FULLNAME         ?= $(PACKAGE)-$(VERSION)
 ARCHIVENAME      ?= $(FULLNAME)
@@ -73,10 +73,10 @@ xpi/install.rdf: install.rdf Makefile
 	mkdir -p xpi
 	XUL_VER_MIN=$(XUL_VER_MIN); \
 	XUL_VER_MAX=$(XUL_VER_MAX); \
-	sed -e 's/$${PLATFORM}/'$(PLATFORM)'/g' \
-	    -e 's/$${VERSION}/'$(VERSION)'/g' \
-	    -e 's/$${XUL_VER_MIN}/'"$${XUL_VER_MIN:-$(XUL_VER_MIN_)}"'/g' \
-	    -e 's/$${XUL_VER_MAX}/'"$${XUL_VER_MAX:-$(XUL_VER_MAX_)}"'/g' \
+	sed -e 's	$${PLATFORM}	'$(PLATFORM)'	g' \
+	    -e 's	$${VERSION}	'$(VERSION)'	g' \
+	    -e 's	$${XUL_VER_MIN}	'"$${XUL_VER_MIN:-$(XUL_VER_MIN_)}"'	g' \
+	    -e 's	$${XUL_VER_MAX}	'"$${XUL_VER_MAX:-$(XUL_VER_MAX_)}"'	g' \
 	    $< > $@
 
 xpi/chrome.manifest: chrome.manifest Makefile
