@@ -19,6 +19,9 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
+ * Matt Lavin <matt.lavin@gmail.com>
+ * Luca Niccoli <lultimouomo@gmail.com>
+ * Ximin Luo <infinity0@gmx.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -54,13 +57,33 @@ extern PRLogModuleInfo *gGnomeKeyringLog;
 
 class GnomeKeyring : public nsILoginManagerStorage
 {
-  private:
-  GnomeKeyringAttributeList *buildAttributeList(nsILoginInfo *aLogin);
-  void appendAttributesFromBag(nsIPropertyBag *matchData,
-                                    GnomeKeyringAttributeList * &attributes);
-  nsresult deleteFoundItems(GList* foundList,
-                                 PRBool);
-  
+private:
+  nsresult
+  deleteFoundItems(GList* foundList,
+                   bool);
+
+  GnomeKeyringResult
+  findItems(GnomeKeyringItemType type,
+            GnomeKeyringAttributeList* attributes,
+            GList** found);
+
+  GnomeKeyringResult
+  findLoginItems(GnomeKeyringAttributeList* attributes,
+                 GList** found);
+
+  GnomeKeyringResult
+  findLogins(const nsAString &aHostname,
+             const nsAString &aActionURL,
+             const nsAString &aHttpRealm,
+             GList** found);
+
+  GnomeKeyringResult
+  findHostItems(const nsAString &aHost,
+                GList** found);
+
+  GnomeKeyringResult
+  findHostItemsAll(GList** found);
+
 public:
   NS_DECL_ISUPPORTS
   NS_DECL_NSILOGINMANAGERSTORAGE
